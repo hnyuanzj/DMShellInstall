@@ -1,0 +1,597 @@
+[BEGIN] 2022/12/20 0:19:21
+[root@centos6 ~]# cd /soft/
+[root@centos6 soft]# ls
+a.sh  dm8_20221121_x86_rh6_64.iso  DMShellInstall
+[root@centos6 soft]# ./DMShellInstall -di dm8_20221121_x86_rh6_64.iso -d /opt/dmdbms
+
+ ███████   ████     ████  ████████ ██               ██  ██ ██                    ██              ██  ██
+░██░░░░██ ░██░██   ██░██ ██░░░░░░ ░██              ░██ ░██░██                   ░██             ░██ ░██
+░██    ░██░██░░██ ██ ░██░██       ░██       █████  ░██ ░██░██ ███████   ██████ ██████  ██████   ░██ ░██
+░██    ░██░██ ░░███  ░██░█████████░██████  ██░░░██ ░██ ░██░██░░██░░░██ ██░░░░ ░░░██░  ░░░░░░██  ░██ ░██
+░██    ░██░██  ░░█   ░██░░░░░░░░██░██░░░██░███████ ░██ ░██░██ ░██  ░██░░█████   ░██    ███████  ░██ ░██
+░██    ██ ░██   ░    ░██       ░██░██  ░██░██░░░░  ░██ ░██░██ ░██  ░██ ░░░░░██  ░██   ██░░░░██  ░██ ░██
+░███████  ░██        ░██ ████████ ░██  ░██░░██████ ███ ███░██ ███  ░██ ██████   ░░██ ░░████████ ███ ███
+░░░░░░░   ░░         ░░ ░░░░░░░░  ░░   ░░  ░░░░░░ ░░░ ░░░ ░░ ░░░   ░░ ░░░░░░     ░░   ░░░░░░░░ ░░░ ░░░ 
+
+
+请选择达梦数据库部署类型：单机[si]/数据守护[dw]/dsc集群[dsc]                                                                                   
+si
+
+达梦数据库安装部署类型: single                                                                           
+
+达梦数据库开始安装：                                                                                  
+
+#==============================================================#                                                                                  
+打印系统信息                                                                                    
+#==============================================================#                                                                                  
+
+服务器时间:                                                                                      
+
+2022年 12月 20日 星期二 06:57:22 CST
+
+操作系统版本:                                                                                   
+
+CentOS release 6.10 (Final)
+
+cpu信息:                                                                                            
+
+Architecture:          x86_64
+CPU op-mode(s):        32-bit, 64-bit
+Byte Order:            Little Endian
+CPU(s):                1
+On-line CPU(s) list:   0
+Thread(s) per core:    1
+Core(s) per socket:    1
+Socket(s):             1
+NUMA node(s):          1
+Vendor ID:             GenuineIntel
+CPU family:            6
+Model:                 142
+Model name:            Intel(R) Core(TM) i7-8565U CPU @ 1.80GHz
+Stepping:              12
+CPU MHz:               1992.001
+BogoMIPS:              3984.00
+Hypervisor vendor:     VMware
+Virtualization type:   full
+L1d cache:             32K
+L1i cache:             32K
+L2 cache:              256K
+L3 cache:              8192K
+NUMA node0 CPU(s):     0
+
+内存信息:                                                                                         
+
+             total       used       free     shared    buffers     cached
+Mem:          2870        248       2622          0          9         79
+-/+ buffers/cache:        159       2711
+Swap:         8191          0       8191
+             total       used       free     shared    buffers     cached
+Mem:          2.8G       248M       2.6G       264K       9.8M        79M
+-/+ buffers/cache:       159M       2.6G
+Swap:         8.0G         0B       8.0G
+
+挂载信息:                                                                                         
+
+UUID=cec08ef8-7698-4f29-85ed-18b15971b9dd /                       ext4    defaults        1 1
+UUID=bbbb2b30-9dbc-4f48-a37c-fec3926d4423 /boot                   ext4    defaults        1 2
+UUID=84e57345-d09b-44e5-8240-2becf00e7c15 swap                    swap    defaults        0 0
+tmpfs                   /dev/shm                tmpfs   defaults        0 0
+devpts                  /dev/pts                devpts  gid=5,mode=620  0 0
+sysfs                   /sys                    sysfs   defaults        0 0
+proc                    /proc                   proc    defaults        0 0
+/dev/sr0                /mnt/cdrom              iso9660 defaults        0 0
+
+目录信息:                                                                                         
+
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/sda3        91G  2.3G   84G   3% /
+tmpfs           1.5G     0  1.5G   0% /dev/shm
+/dev/sda1       190M   39M  142M  22% /boot
+/dev/sr0        3.8G  3.8G     0 100% /mnt/cdrom
+.host:/         200G  108G   93G  54% /mnt/hgfs
+
+#==============================================================#                                                                                  
+关闭 SWAP 功能                                                                                    
+#==============================================================#                                                                                  
+
+             total       used       free     shared    buffers     cached
+Mem:       2939404     248008    2691396        264      10024      81500
+-/+ buffers/cache:     156484    2782920
+Swap:            0          0          0
+
+#UUID=84e57345-d09b-44e5-8240-2becf00e7c15 swap                    swap    defaults        0 0
+
+#==============================================================#                                                                                  
+禁用防火墙                                                                                       
+#==============================================================#                                                                                  
+
+iptables：将链设置为政策 ACCEPT：filter                    [确定]
+iptables：清除防火墙规则：                                 [确定]
+iptables：正在卸载模块：                                   [确定]
+ip6tables：将 chains 设置为 ACCEPT 策略：filter            [确定]
+ip6tables：清除防火墙规则：                                [确定]
+：正在卸载模块：                                           [确定]
+iptables：未运行防火墙。
+
+#==============================================================#                                                                                  
+禁用 selinux                                                                                        
+#==============================================================#                                                                                  
+
+SELINUX=disabled
+SELINUXTYPE=targeted 
+
+#==============================================================#                                                                                  
+配置时间同步                                                                                    
+#==============================================================#                                                                                  
+
+2022年 12月 20日 星期二 06:57:22 CST
+
+no crontab for root
+
+#==============================================================#                                                                                  
+禁用透明大页 & 禁用NUMA & 开启 I/0 schedule                                                                                  
+#==============================================================#                                                                                  
+
+index=0
+kernel=/vmlinuz-2.6.32-754.el6.x86_64
+args="ro rd_NO_LUKS  KEYBOARDTYPE=pc KEYTABLE=us rd_NO_MD crashkernel=auto LANG=zh_CN.UTF-8 rd_NO_LVM rd_NO_DM rhgb quiet numa=off transparent_hugepage=never elevator=deadline"
+
+#==============================================================#                                                                                  
+创建 DMDBA 用户以及安装目录                                                                                  
+#==============================================================#                                                                                  
+
+更改用户 dmdba 的密码 。
+passwd： 所有的身份验证令牌已经成功更新。
+
+dmdba:x:54321:54321::/home/dmdba:/bin/bash
+
+uid=54321(dmdba) gid=54321(dinstall) 组=54321(dinstall),54322(dmdba)
+
+#==============================================================#                                                                                  
+配置系统参数                                                                                    
+#==============================================================#                                                                                  
+
+net.ipv4.ip_forward = 0
+net.ipv4.conf.default.rp_filter = 1
+net.ipv4.conf.default.accept_source_route = 0
+kernel.sysrq = 0
+kernel.core_uses_pid = 1
+net.ipv4.tcp_syncookies = 1
+kernel.msgmnb = 65536
+kernel.msgmax = 65536
+kernel.shmmax = 68719476736
+kernel.shmall = 4294967296
+fs.aio-max-nr = 1048576
+fs.file-max = 6815744
+kernel.shmmni = 4096
+kernel.sem = 250 32000 100 128
+net.ipv4.ip_local_port_range = 9000 65500
+net.core.rmem_default = 262144
+net.core.rmem_max = 4194304
+net.core.wmem_default = 262144
+net.core.wmem_max = 1048576
+vm.swappiness = 0
+vm.dirty_background_ratio = 3
+vm.dirty_ratio = 80
+vm.dirty_expire_centisecs = 500
+vm.dirty_writeback_centisecs = 100
+error: "vm.numa_stat" is an unknown key
+vm.overcommit_memory = 0
+
+#==============================================================#                                                                                  
+配置用户限制                                                                                    
+#==============================================================#                                                                                  
+
+dmdba - nice   0
+dmdba - as     unlimited
+dmdba - fsize  unlimited
+dmdba - nproc  131072
+dmdba - nofile 131072
+dmdba - core   unlimited
+dmdba - data   unlimited
+root  - nice   0
+root  - as     unlimited
+root  - fsize  unlimited
+root  - nproc  131072
+root  - nofile 131072
+root  - core   unlimited
+root  - data   unlimited
+
+auth [user_unknown=ignore success=ok ignore=ignore default=bad] pam_securetty.so
+auth       include      system-auth
+account    required     pam_nologin.so
+account    include      system-auth
+password   include      system-auth
+session    required     pam_selinux.so close
+session    required     pam_loginuid.so
+session    optional     pam_console.so
+session    required     pam_selinux.so open
+session    required     pam_namespace.so
+session    optional     pam_keyinit.so force revoke
+session    include      system-auth
+-session   optional     pam_ck_connector.so
+session required pam_limits.so
+session required /lib64/security/pam_limits.so
+
+#==============================================================#                                                                                  
+配置语言中文                                                                                    
+#==============================================================#                                                                                  
+
+export LANG=zh_CN.UTF-8
+
+#==============================================================#                                                                                  
+配置用户环境变量                                                                                  
+#==============================================================#                                                                                  
+
+if [ -f ~/.bashrc ]; then
+	. ~/.bashrc
+fi
+PATH=$PATH:$HOME/bin
+export PATH
+export MALLOC_ARENA_MAX=1
+export DM_HOME=/opt/dmdbms
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$DM_HOME/bin
+export PATH=$PATH:$DM_HOME/bin:$DM_HOME/tool
+export PS1="[`whoami`@`hostname`:"'\w]$ '
+alias ds='disql SYSDBA/SYSDBA:5236 '
+alias dsql='disql SYSDBA/SYSDBA:5236  \`'
+alias dssql='disql -S SYSDBA/SYSDBA:5236  \`'
+alias dmlog='cd $DM_HOME/log'
+
+#==============================================================#                                                                                  
+挂载达梦安装镜像                                                                                  
+#==============================================================#                                                                                  
+
+总用量 959M
+-r-xr-xr-x. 1 root root 2.7M 11月 21 16:25 DM8 Install.pdf
+-r-xr-xr-x. 1 root root 957M 11月 21 16:27 DMInstall.bin
+
+#==============================================================#                                                                                  
+安装达梦数据库软件                                                                                  
+#==============================================================#                                                                                  
+
+解压安装程序......... 
+2022-12-20 06:57:55 
+[INFO] 安装达梦数据库...
+2022-12-20 06:57:56 
+[INFO] 安装 基础 模块...
+2022-12-20 06:57:59 
+[INFO] 安装 服务器 模块...
+2022-12-20 06:58:00 
+[INFO] 安装 客户端 模块...
+2022-12-20 06:58:03 
+[INFO] 安装 驱动 模块...
+2022-12-20 06:58:04 
+[INFO] 安装 手册 模块...
+2022-12-20 06:58:05 
+[INFO] 安装 服务 模块...
+2022-12-20 06:58:06 
+[INFO] 移动日志文件。
+2022-12-20 06:58:06 
+[INFO] 更改安装目录权限完成。
+2022-12-20 06:58:07 
+[INFO] 正在启动DmAPService服务...
+2022-12-20 06:58:22 
+[INFO] 启动DmAPService服务成功。
+2022-12-20 06:58:22 
+[INFO] 安装达梦数据库完成。
+
+#==============================================================#                                                                                  
+初始化达梦数据库                                                                                  
+#==============================================================#                                                                                  
+
+initdb V8
+db version: 0x7000c
+file dm.key not found, use default license!
+License will expire on 2023-11-21
+Normal of FAST
+Normal of DEFAULT
+Normal of RECYCLE
+Normal of KEEP
+Normal of ROLL
+
+ log file path: /dmdata/DAMENG/DAMENG01.log
+
+
+ log file path: /dmdata/DAMENG/DAMENG02.log
+
+write to dir [/dmdata/DAMENG].
+create dm database success. 2022-12-20 06:58:27
+
+#==============================================================#                                                                                  
+注册实例服务                                                                                    
+#==============================================================#                                                                                  
+
+移动服务脚本文件(/opt/dmdbms/bin/DmServiceDAMENG 到 /etc/rc.d/init.d/DmServiceDAMENG)
+创建服务(DmServiceDAMENG)完成
+
+#==============================================================#                                                                                  
+启停数据库                                                                                       
+#==============================================================#                                                                                  
+
+
+后台启动数据库：                                                                                  
+
+Starting DmServiceDAMENG:                                  [ OK ]
+DmServiceDAMENG (pid 5459) is running.
+
+查询数据库基础参数信息：                                                                                  
+
+密钥过期时间：2023-11-21
+
+数据库参数项              数据库参数值                 
+------------------------------- -----------------------------------
+实例名                       DMSERVER
+DM Database Server x64 V8       --03134283950-20221121-175072-20024
+簇大小                       32
+页大小                       32
+大小写敏感                 1
+字符集                       1
+varchar是否以字符为单位 0
+
+#==============================================================#                                                                                  
+创建归档和备份脚本                                                                                  
+#==============================================================#                                                                                  
+
+创建数据库归档脚本：                                                                                  
+
+-rw-r--r--. 1 dmdba dinstall 378 12月 20 06:58 /home/dmdba/scripts/conf_arch.sql
+
+创建数据库备份脚本：                                                                                  
+
+-rw-r--r--. 1 dmdba dinstall 780 12月 20 06:58 /home/dmdba/scripts/conf_fullbackup.sql
+-rw-r--r--. 1 dmdba dinstall 1.5K 12月 20 06:58 /home/dmdba/scripts/conf_incrbackup.sql
+
+创建 DMDBA 用户脚本，密码 SYSDBA ：                                                                                  
+
+-rw-r--r--. 1 dmdba dinstall 696 12月 20 06:58 /home/dmdba/scripts/ct_dbuser.sql
+
+#==============================================================#                                                                                  
+创建达梦数据库优化脚本                                                                                  
+#==============================================================#                                                                                  
+
+创建数据库参数配置脚本：                                                                                  
+
+-rw-r--r--. 1 dmdba dinstall 14K 12月 20 06:58 /home/dmdba/scripts/conf_para.sql
+
+创建数据库优化结果查询脚本：                                                                                  
+
+-rw-r--r--. 1 dmdba dinstall 2.2K 12月 20 06:58 /home/dmdba/scripts/query_dm.sql
+
+#==============================================================#                                                                                  
+配置数据库归档                                                                                  
+#==============================================================#                                                                                  
+
+密钥过期时间：2023-11-21
+
+ARCH_MODE
+---------
+Y
+
+ARCH_NAME      ARCH_DEST      ARCH_FILE_SIZE ARCH_SPACE_LIMIT
+-------------- -------------- -------------- ----------------
+ARCHIVE_LOCAL1 /dmarch/DAMENG 1024           102400
+
+#==============================================================#                                                                                  
+数据库创建备份作业                                                                                  
+#==============================================================#                                                                                  
+
+密钥过期时间：2023-11-21
+
+NAME     DESCRIBE                                                                       
+-------- -------------------------------------------------------------------------------
+bak_full 周六全量备份，并删除30天之前的备份。
+bak_inc  周日到周五做增量备份,如果失败,清除8天前备份,做全量备份
+
+NAME      COMMAND                                                                                                  
+--------- ---------------------------------------------------------------------------------------------------------
+bak_clear CALL SF_BAKSET_BACKUP_DIR_ADD('DISK','/dmbak/DAMENG'); CALL SP_DB_BAKSET_REMOVE_BATCH('DISK',SYSDATE-30);
+
+#==============================================================#                                                                                  
+优化数据库基础参数                                                                                  
+#==============================================================#                                                                                  
+
+密钥过期时间：2023-11-21
+
+修改cpu相关参数: 
+ 
+SP_SET_PARA_VALUE(2,'WORKER_THREADS',1);
+SP_SET_PARA_VALUE(2,'TASK_THREADS',4);
+SP_SET_PARA_VALUE(2,'IO_THR_GROUPS',2);
+
+修改内存池相关参数: 
+ 
+SP_SET_PARA_VALUE(2,'MAX_OS_MEMORY',80);
+SP_SET_PARA_VALUE(2,'MEMORY_POOL',100);
+SP_SET_PARA_VALUE(2,'MEMORY_N_POOLS',1);
+SP_SET_PARA_VALUE(2,'MEMORY_TARGET',0);
+
+修改缓冲区相关参数: 
+ 
+SP_SET_PARA_VALUE(2,'BUFFER',1000);
+SP_SET_PARA_VALUE(2,'MAX_BUFFER',1000);
+SP_SET_PARA_VALUE(2,'BUFFER_POOLS',3);
+SP_SET_PARA_VALUE(2,'RECYCLE',80);
+SP_SET_PARA_VALUE(2,'RECYCLE_POOLS',2);
+
+修改fast_pool相关参数: 
+ 
+SP_SET_PARA_VALUE(2,'FAST_POOL_PAGES',3000);
+SP_SET_PARA_VALUE(2,'FAST_ROLL_PAGES',1000);
+
+修改内存检测参数为1: 
+ 
+SP_SET_PARA_VALUE(2,'MEMORY_MAGIC_CHECK',1);
+
+非DSC环境将ENABLE_FREQROOTS设置为1,注意DM7 V$instance视图没有dsc_role字段,DM7这部分可以删掉: 
+ 
+SP_SET_PARA_VALUE(2,'ENABLE_FREQROOTS',1);
+
+修改HASH相关参数: 
+ 
+SP_SET_PARA_VALUE(1,'HJ_BUF_GLOBAL_SIZE',500);
+SP_SET_PARA_VALUE(1,'HJ_BUF_SIZE',50);
+SP_SET_PARA_VALUE(1,'HAGR_BUF_GLOBAL_SIZE',500);
+SP_SET_PARA_VALUE(1,'HAGR_BUF_SIZE',50);
+
+修改排序相关参数: 
+ 
+SP_SET_PARA_VALUE(2,'SORT_FLAG',0);
+SP_SET_PARA_VALUE(2,'SORT_BLK_SIZE',1);
+SP_SET_PARA_VALUE(2,'SORT_BUF_SIZE',10);
+SP_SET_PARA_VALUE(2,'SORT_BUF_GLOBAL_SIZE',500);
+
+修改其他内存参数: 
+ 
+SP_SET_PARA_VALUE(2,'RLOG_POOL_SIZE',256);
+SP_SET_PARA_VALUE(2,'CACHE_POOL_SIZE',200);
+SP_SET_PARA_VALUE(2,'DICT_BUF_SIZE',50);
+SP_SET_PARA_VALUE(2,'VM_POOL_TARGET',16384);
+SP_SET_PARA_VALUE(2,'SESS_POOL_TARGET',16384);
+
+修改实例相关参数: 
+ 
+SP_SET_PARA_VALUE(2,'USE_PLN_POOL',1);
+SP_SET_PARA_VALUE(2,'ENABLE_MONITOR',1);
+SP_SET_PARA_VALUE(2,'TEMP_SIZE',1024);
+SP_SET_PARA_VALUE(2,'TEMP_SPACE_LIMIT',102400);
+SP_SET_PARA_VALUE(2,'MAX_SESSIONS',1500);
+SP_SET_PARA_VALUE(2,'MAX_SESSION_STATEMENT',20000);
+SP_SET_PARA_VALUE(2,'PK_WITH_CLUSTER',0);
+SP_SET_PARA_VALUE(2,'ENABLE_ENCRYPT',0);
+
+修改优化器相关参数: 
+ 
+SP_SET_PARA_VALUE(2,'OLAP_FLAG',2);
+SP_SET_PARA_VALUE(2,'VIEW_PULLUP_FLAG',1);
+SP_SET_PARA_VALUE(2,'OPTIMIZER_MODE',1);
+SP_SET_PARA_VALUE(2,'ADAPTIVE_NPLN_FLAG',0);
+
+开启并行PURGE: 
+ 
+SP_SET_PARA_VALUE(2,'PARALLEL_PURGE_FLAG',1);
+
+开启手动并行: 
+ 
+SP_SET_PARA_VALUE(2,'PARALLEL_POLICY',2);
+
+UNDO_RETENTION如果放大，可以适当调大UNDO_EXTENT_NUM。负载高的时候，减少文件系统的申请/释放操作: 
+ 
+SP_SET_PARA_VALUE(2,'UNDO_EXTENT_NUM',16);
+
+开启SQL 注入HINT功能: 
+ 
+SP_SET_PARA_VALUE(2,'ENABLE_INJECT_HINT',1);
+
+开启数据异步追踪: 
+ 
+SP_SET_PARA_VALUE(1,'SVR_LOG',1);
+
+开启操作系统认证: 
+ 
+sp_set_para_value(2,'ENABLE_LOCAL_OSAUTH',1);
+
+
+
+重启数据库，优化参数生效                                                                                  
+
+Stopping DmServiceDAMENG:                                  [ OK ]
+Starting DmServiceDAMENG:                                  [ OK ]
+
+#==============================================================#                                                                                  
+创建DMDBA用户，密码：SYSDBA                                                                                  
+#==============================================================#                                                                                  
+
+密钥过期时间：2023-11-21
+
+USERNAME  
+----------
+SYSAUDITOR
+SYSSSO
+SYSDBA
+DMDBA
+SYS
+
+#==============================================================#                                                                                  
+查询数据库优化结果：                                                                                  
+#==============================================================#                                                                                  
+
+密钥过期时间：2023-11-21
+
+PARA_NAME             DEFAULT_VALUE PARA_VALUE
+--------------------- ------------- ----------
+MAX_OS_MEMORY         100           80
+MAX_SESSION_STATEMENT 10000         20000
+TRX_VIEW_MODE         1             1
+MAX_SESSIONS          10000         1500
+IO_THR_GROUPS         8             2
+ADAPTIVE_NPLN_FLAG    3             0
+OPTIMIZER_MODE        1             1
+TOP_DIS_HASH_FLAG     1             1
+TOP_ORDER_OPT_FLAG    0             0
+VIEW_PULLUP_FLAG      0             1
+USE_PLN_POOL          1             1
+TASK_THREADS          16            4
+WORKER_THREADS        16            1
+SESS_POOL_TARGET      16384         16384
+SESS_POOL_SIZE        64            64
+VM_POOL_TARGET        16384         16384
+DICT_BUF_SIZE         50            50
+HAGR_BUF_SIZE         500           50
+HAGR_BUF_GLOBAL_SIZE  5000          1000
+HJ_BUF_SIZE           500           50
+HJ_BUF_GLOBAL_SIZE    5000          1000
+SORT_FLAG             0             0
+SORT_BUF_GLOBAL_SIZE  1000          500
+SORT_BLK_SIZE         1             1
+SORT_BUF_SIZE         20            10
+MAX_BUFFER            1000          1000
+RECYCLE_POOLS         3             1
+RECYCLE               300           80
+BUFFER_POOLS          9             3
+BUFFER                1000          1000
+MEMORY_MAGIC_CHECK    1             1
+MEMORY_TARGET         15000         0
+MEMORY_N_POOLS        1             1
+MEMORY_POOL           500           100
+PK_WITH_CLUSTER       0             0
+ENABLE_MONITOR        1             1
+SVR_LOG               0             1
+DATETIME_FMT_MODE     0             0
+COMPATIBLE_MODE       0             0
+CLOB_LIKE_MAX_LEN     10240         10240
+ENABLE_ENCRYPT        0             0
+REDOS_PARALLEL_NUM    1             1
+RLOG_POOL_SIZE        256           256
+CACHE_POOL_SIZE       100           200
+TEMP_SPACE_LIMIT      0             102400
+TEMP_SIZE             10            1024
+OLAP_FLAG             2             2
+
+恭喜您，达梦数据库已经安装完成！                                                                                  
+[root@centos6 soft]# su - dmdba
+[dmdba@centos6:~]$ ds
+
+服务器[LOCALHOST:5236]:处于普通打开状态
+登录使用时间 : 2.103(ms)
+密钥过期时间：2023-11-21
+disql V8
+06:59:34 SYSDBA@DAMENG:5236 SQL> select * from v$database;
+
+NAME   CREATE_TIME         ARCH_MODE LAST_CKPT_TIME STATUS$     ROLE$       MAX_SIZE             TOTAL_SIZE           DSC_NODES   OPEN_COUNT  STARTUP_COUNT        LAST_STARTUP_TIME  
+------ ------------------- --------- -------------- ----------- ----------- -------------------- -------------------- ----------- ----------- -------------------- -------------------
+DAMENG 2022-12-20 06:58:27 Y         NULL           4           0           0                    43648                1           4           3                    2022-12-20 06:59:06
+
+已用时间: 0.573(毫秒). 执行号:704.
+06:59:42 SYSDBA@DAMENG:5236 SQL> select * from v$instance;
+
+NAME     INSTANCE_NAME INSTANCE_NUMBER HOST_NAME SVR_VERSION                DB_VERSION          START_TIME          STATUS$ MODE$  OGUID       DSC_SEQNO   DSC_ROLE BUILD_VERSION                        BUILD_TIME          
+-------- ------------- --------------- --------- -------------------------- ------------------- ------------------- ------- ------ ----------- ----------- -------- ------------------------------------ --------------------
+DMSERVER DMSERVER      1               centos6   DM Database Server x64 V8  DB Version: 0x7000c 2022-12-20 06:59:04 OPEN    NORMAL 0           0           NULL     1-2-174-2022.11.21-175072-20024-ENT  Nov 21 2022 10:42:59
+
+已用时间: 0.447(毫秒). 执行号:705.
+06:59:53 SYSDBA@DAMENG:5236 SQL> exit
+[dmdba@centos6:~]$ exit
+logout
+
+[END] 2022/12/20 0:22:53
