@@ -33,5 +33,4 @@ echo "UUID=$uuid3 /dmbak ext4 defaults,noatime 0 0" >>/etc/fstab
 mount -a
 
 # 4----df  -h
-
 df -h
