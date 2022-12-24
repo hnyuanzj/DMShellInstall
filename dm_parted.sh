@@ -16,23 +16,21 @@ q
 EOF
 
 # 2---df -Th
-for((i=1;i<=3;i++))
-do
-/usr/sbin/mkfs.ext4 -T largefile /dev/sdb$i
+for ((i = 1; i <= 3; i++)); do
+    /usr/sbin/mkfs.ext4 -T largefile /dev/sdb$i
 done
 
 mkdir /opt/dmdbms
 mkdir -p /dm{data,arch,bak}
 
 # 3---cat /etc/fstab
-uuid1=`blkid | grep sdb1 |awk '{print $2}' |cut -c 7-42`
-echo "UUID=$uuid1 /dmdata ext4 defaults,noatime 0 0" >> /etc/fstab
-uuid2=`blkid | grep sdb2 |awk '{print $2}' |cut -c 7-42`
-echo "UUID=$uuid2 /dmarch ext4 defaults,noatime 0 0" >> /etc/fstab
-uuid3=`blkid | grep sdb3 |awk '{print $2}' |cut -c 7-42`
-echo "UUID=$uuid3 /dmbak ext4 defaults,noatime 0 0" >> /etc/fstab
+uuid1=$(blkid | grep sdb1 | awk '{print $2}' | cut -c 7-42)
+echo "UUID=$uuid1 /dmdata ext4 defaults,noatime 0 0" >>/etc/fstab
+uuid2=$(blkid | grep sdb2 | awk '{print $2}' | cut -c 7-42)
+echo "UUID=$uuid2 /dmarch ext4 defaults,noatime 0 0" >>/etc/fstab
+uuid3=$(blkid | grep sdb3 | awk '{print $2}' | cut -c 7-42)
+echo "UUID=$uuid3 /dmbak ext4 defaults,noatime 0 0" >>/etc/fstab
 mount -a
-
 
 # 4----df  -h
 df -h
