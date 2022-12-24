@@ -1,0 +1,491 @@
+#!/bin/bash
+#==============================================================#
+# 脚本名     :   DMCheckInstall
+# 创建时间   :   2022-12-22 10:02:09
+# 更新时间   :   2022-12-22 18:12:18
+# 描述      :   达梦数据库巡检脚本（单机/数据守护/DSC）
+# 路径      :   /soft/DMCheckInstall
+# 版本      :   1.0.0
+# 作者      :   Lucifer(pc1107750981@163.com) yuanzijian(yzj@dameng.com)
+# Copyright (C) 2021-2022 Pengcheng Liu       Zijian yuan
+#==============================================================#
+## 安装脚本以及软件包存放位置
+software_dir=$(dirname $(readlink -f $0))
+## 达梦数据库安装日志
+DMCheck=$software_dir/print_dm_check_$(date +"20%y%m%d%H%M%S").log
+##DM_HOME
+dm_home=$(ps -ef | grep dmserver | awk '{print $8}' | sed 's/\/bin\/dmserver$//g' | egrep -v 'grep|sed')
+##密码
+sysdba_pwd=SYSDBA
+##IP
+host=127.0.0.1
+##端口
+port_num=5236
+##拼接登录口令
+sqlCli=""
+#==============================================================#
+#                          日志输出颜色                          #
+#==============================================================#
+
+color_printf() {
+    local color=$1
+    local res='\E[0m'
+    if [[ $color = "red" ]]; then
+        color='\E[1;31m'
+    elif [[ $color = "green" ]]; then
+        color='\E[1;32m'
+    elif [[ $color = "blue" ]]; then
+        color='\E[1;34m'
+    elif [[ $color = "pink" ]]; then
+        color='\E[1;35m'
+    fi
+    printf "$color%-20s %-30s %-50s\n$res" "$2" "$3" "$4"
+}
+
+#==============================================================#
+#                          打印日志                             #
+#==============================================================#
+log_print() {
+    echo
+    color_printf green "#==============================================================#"
+    color_printf green "$1"
+    color_printf green "#==============================================================#"
+    if [[ $2 ]]; then
+        echo
+        color_printf "$2"
+    else
+        echo
+    fi
+}
+help() {
+    echo
+    color_printf blue "输入参数，巡检数据库"
+    echo
+    color_printf green "-dh" "--dm_home" "DM数据库安装目录"
+    color_printf green "-hs" "--host" "数据库服务器IP"
+    color_printf green "-pn" "--port_num" "数据库端口"
+    color_printf green "-sp" "--sysdba_pwd" "数据库密码"
+    echo
+    exit 0
+}
+#==============================================================#
+##测试数据库
+#==============================================================#
+test_login_db() {
+    su - dmdba -c "source .bash_profile"
+    sqlCli="$dm_home/bin/disql -S -L sysdba/'\"$sysdba_pwd\"'@$host:$port_num -c \"set heading off\" -e "
+    while true; do
+        sleep 5s
+        PID=$(ps -ef | grep dm.ini | grep -v grep | grep -v $$ | awk '{print $2}')
+        if [ -n $PID ]; then
+            connResult=$(su - dmdba -c "$sqlCli \"select 1\"" | awk END{print})
+            if [ $connResult = 1 ]; then
+                break
+            else
+                color_printf red "密码不正确"
+                exit 99
+            fi
+        fi
+    done
+}
+#1.检查cpu
+#lscpu
+#==============================================================#
+#                          打印日志                             #
+#==============================================================#
+cpu_info() {
+    log_print "CPU 信息" ""
+    cname=$(awk -F: '/model name/ {name=$2} END {print name}' /proc/cpuinfo | sed 's/^[ \t]*//;s/[ \t]*$//')
+    cores=$(awk -F: '/model name/ {core++} END {print core}' /proc/cpuinfo)
+    echo "CPU model       :" $cname
+    echo "Number of cores :" $cores
+}
+
+#==============================================================#
+#2.服务器内存
+#free -m & free –g
+#==============================================================#
+ram_info() {
+    log_print "内存 信息" ""
+    tram=$(free -m | awk '/Mem/ {print $2}')
+    uram=$(free -m | awk '/Mem/ {print $3}')
+    echo "Total amount of Mem : ${tram} M"
+    echo "Used amount of Mem  : ${uram} M"
+}
+
+#==============================================================#
+#3.服务器存储
+#df -h
+#==============================================================#
+disk_info() {
+    log_print "磁盘 信息" ""
+    fs=$(df -h | grep -v boot | awk '/^\/dev\/sd|vd|mapper/{print $1}')
+    for p in $fs; do
+        mounted=$(df -h | awk '$1=="'$p'"{print $NF}')
+        size=$(df -h | awk '$1=="'$p'"{print $2}')
+        used=$(df -h | awk '$1=="'$p'"{print $3}')
+        used_percent=$(df -h | awk '$1=="'$p'"{print $5}')
+        echo "硬盘 - 挂载点: $mounted , 总大小: $size , 使用: $used , 使用率: $used_percent"
+    done
+}
+
+#==============================================================#
+#4.磁盘挂载uuid
+#==============================================================#
+uuid_info() {
+    log_print "数据盘UUID挂载" ""
+    cat /etc/fstab | grep -i dm
+}
+
+#==============================================================#
+##5.磁盘调度算法
+#==============================================================#
+disk_sch() {
+    log_print "磁盘调度算法" ""
+    all_disk=$(lsblk -l | awk '/^sd|vd/{print $1}' | sed -n '/[0-9]$/!p')
+    for a in ${all_disk// /}; do
+        echo "/dev/$a :  $(cat /sys/block/${a}/queue/scheduler)"
+    done
+}
+
+#==============================================================#
+##6.磁盘缓存策略
+#==============================================================#
+swap_info() {
+    log_print "SWAP 信息" ""
+    swap=$(free -m | awk '/Swap/ {print $2}')
+    uswap=$(free -m | awk '/Swap/ {print $3}')
+    echo "Total amount of Mem : ${swap}  M"
+    echo "Used amount of Mem  : ${uswap} M"
+}
+
+#7.raid卡
+#略
+
+#==============================================================#
+#8.系统版本
+#==============================================================#
+os_version() {
+    log_print "系统 信息" ""
+    if [[ -e /etc/os-release ]]; then
+        cat /etc/os-release
+    elif [[ -e /etc/system-release ]]; then
+        cat /etc/system-release
+    elif [[ -e /etc/redhat-release ]]; then
+        cat /etc/redhat-release
+    fi
+}
+
+#==============================================================#
+#9.dmdba用户和dinstall组
+#==============================================================#
+os_user() {
+    log_print "dmdba 信息" ""
+    cat /etc/passwd | grep dmdba
+}
+
+#==============================================================#
+#10磁盘io性能
+#==============================================================#
+disk_io() {
+    log_print "磁盘IO 信息" ""
+    local sysPathTmp=$(su - dmdba -c "$sqlCli  \"select para_value from v\\\$dm_ini where para_name='SYSTEM_PATH';\"" | awk END{print})
+    local sysPath=$(tr -d '\n' <<<$sysPathTmp)
+
+    if [ -d $sysPath ]; then
+        dd if=/dev/zero of=$sysPath/testdisk.dbf bs=32k count=10k oflag=direct,nonblock
+        dd if=/dev/zero of=$sysPath/testdisk.dbf bs=32k count=10k oflag=sync
+        dd of=$sysPath/testdisk1.dbf if=$sysPath/testdisk.dbf bs=32k count=10k oflag=direct,nonblock
+        dd of=/dev/null if=$sysPath/testdisk.dbf bs=32k count=10k oflag=sync
+    else
+        color_printf red "挂载目录/dmdata不存在"
+    fi
+    [[ -e $sysPath/testdisk.dbf ]] && rm -f $sysPath/testdisk.dbf
+    [[ -e $sysPath/testdisk1.dbf ]] && rm -f $sysPath/testdisk1.dbf
+}
+
+#==============================================================#
+#11.网卡
+##ethtool
+#==============================================================#
+nic_info() {
+    log_print "网卡信息" ""
+    nic=$(ip addr | grep -v lo | grep '[0-9]:' | head -n 1 | awk -F: '{print $2}')
+    for i in ${nic// /}; do
+        echo "$i : $(ethtool $i | grep -i speed | awk -F":" '{print $2}')"
+    done
+}
+
+#==============================================================#
+##12.防火墙策略
+#==============================================================#
+firewall_info() {
+    log_print "防火墙 信息" ""
+    if [[ $(systemctl status firewalld.service | grep -c running) > 0 ]]; then
+        systemctl status firewalld
+        firewall-cmd --list-all
+    else
+        systemctl status firewalld
+    fi
+}
+
+#==============================================================#
+##13.资源限制
+#==============================================================#
+uli_sys() {
+    log_print "系统资源配置和内核参数 信息" ""
+    color_printf blue "系统资源"
+    su - dmdba -c "ulimit -a"
+    echo
+    color_printf blue "内核资源"
+    sysctl -p | grep vm.overcommit_memory
+}
+
+#==============================================================#
+##15.服务器时间
+#==============================================================#
+ser_date() {
+    log_print "服务器时间 信息" "date;date -R"
+    date
+    date -R
+}
+
+##16top参数
+##cpu利用率
+#==============================================================#
+##17.DM进程参数
+##top
+#==============================================================#
+dm_pid() {
+    log_print "系统进程 信息" "date;date -R"
+    pid=$(ps -ef | grep dm.ini | grep -v grep | awk '{print $2}')
+    top -n 5 -p $pid
+}
+#==============================================================#
+##17.DM运行环境
+#==============================================================#
+db_info() {
+    log_print "数据库部署环境 信息" "ps -ef | grep dmserver"
+    color_printf blue "运行用户"
+    echo
+    ps -ef | grep dmserver
+    color_printf blue "运行环境"
+    echo
+    su - dmdba -c "cat .bash_profile"
+}
+#==============================================================#
+##数据库版本查询
+#==============================================================#
+sel_ver() {
+    log_print "数据库版本 信息" "SELECT SVR_VERSION||' '||ID_CODE  数据库版本  FROM V\$INSTANCE;"
+    su - dmdba -c "$sqlCli  \"select svr_version||' '||id_code  数据库版本  from v\\\$instance;\""
+}
+#==============================================================#
+##授权信息
+#==============================================================#
+sel_lic() {
+    log_print "数据库授权 信息" "select * from v\$license;"
+    su - dmdba -c "$sqlCli  \"select * from v\\\$license;\""
+}
+#==============================================================#
+##初始化参数查询
+#==============================================================#
+sel_ini_par() {
+    log_print "数据库初始化参数 信息" ""
+    su - dmdba -c "$sqlCli  \"
+select '实例名称' 数据库参数项, INSTANCE_NAME 数据库参数值 FROM v\\\$instance
+union all
+select '数据库版本', id_code
+union all
+SELECT '字符集', CASE SF_GET_UNICODE_FLAG() WHEN '0' THEN 'GB18030' WHEN '1' then 'UTF-8' when '2' then 'EUC-KR' end
+union all
+SELECT '页大小', cast(PAGE()/1024 as varchar)
+union all
+SELECT '簇大小', cast(SF_GET_EXTENT_SIZE() as varchar)
+union all
+SELECT '大小写敏感', cast(SF_GET_CASE_SENSITIVE_FLAG() as varchar)
+union all
+select 'varchar是否以字符为单位', cast(SF_GET_LENGTH_IN_CHAR() as varchar);
+\""
+}
+#==============================================================#
+##参数查询
+#==============================================================#
+sel_para() {
+
+    tab_name=$(su - dmdba -c "$sqlCli \"select table_name from user_tables where table_name like 'BAK_DMINI_%';\"" | awk END{print})
+
+    log_print "数据库参数 信息" ""
+    su - dmdba -c "$sqlCli  \"
+select a.para_name,b.para_value,a.para_value default_value 
+from $tab_name b,v\\\$dm_ini a	
+where a.para_name=b.para_name and
+a.para_name in	('WORKER_THREADS',
+'TASK_THREADS',	'IO_THR_GROUPS',	'MAX_OS_MEMORY',	'MEMORY_POOL',   
+'MEMORY_N_POOLS',	'MEMORY_TARGET', 	'BUFFER',   'MAX_BUFFER',   
+'BUFFER_POOLS', 'RECYCLE',  'RECYCLE_POOLS','HJ_BUF_GLOBAL_SIZE',
+'HJ_BUF_SIZE', 	'HAGR_BUF_GLOBAL_SIZE',	'HAGR_BUF_SIZE',
+'SORT_FLAG',	'SORT_BLK_SIZE',	'SORT_BUF_SIZE',	'SORT_BUF_GLOBAL_SIZE',
+'RLOG_POOL_SIZE', 	'SESS_POOL_SIZE', 	'CACHE_POOL_SIZE',	'DICT_BUF_SIZE',  
+'VM_POOL_TARGET', 	'SESS_POOL_TARGET',	'USE_PLN_POOL',	'ENABLE_MONITOR',  
+'SVR_LOG',	'TEMP_SIZE',	'TEMP_SPACE_LIMIT',	'MAX_SESSIONS',    
+'MAX_SESSION_STATEMENT','PK_WITH_CLUSTER','ENABLE_ENCRYPT',
+'CLOB_LIKE_MAX_LEN',	'OLAP_FLAG',	'VIEW_PULLUP_FLAG',  
+'OPTIMIZER_MODE', 	'ADAPTIVE_NPLN_FLAG',	'TOP_DIS_HASH_FLAG',
+'TOP_ORDER_OPT_FLAG',	'MEMORY_MAGIC_CHECK','DATETIME_FMT_MODE',
+'COMPATIBLE_MODE','TRX_VIEW_MODE','REDOS_PARALLEL_NUM');
+\""
+}
+#==============================================================#
+##redo
+#==============================================================#
+sel_redo() {
+    log_print "数据库redo 信息" "select * from v\$rlogfile;"
+    su - dmdba -c "$sqlCli  \"select * from v\\\$rlogfile;\""
+}
+#==============================================================#
+##arch
+#==============================================================#
+sel_arch() {
+    log_print "数据库归档 信息" "select arch_name,arch_dest,arch_file_size,arch_space_limit  from v\$dm_arch_ini;"
+    su - dmdba -c "$sqlCli  \"select arch_name,arch_dest,arch_file_size,arch_space_limit  from v\\\$dm_arch_ini;\""
+}
+#==============================================================#
+##data_arch
+#==============================================================#
+sel_data_arch() {
+    log_print "数据库数据目录和归档 信息" "select top 1 d.path 数据目录,a.arch_dest 归档目录 from v\$datafile d,v\$dm_arch_ini a;"
+    su - dmdba -c "$sqlCli  \"select top 1 d.path 数据目录,a.arch_dest 归档目录 from v\\\$datafile d,v\\\$dm_arch_ini a;\""
+}
+#==============================================================#
+##bak
+#==============================================================#
+sel_bak() {
+    log_print "数据库备份 信息" "select name,describe from sysjob.sysjobs;"
+    su - dmdba -c "$sqlCli  \"select name,describe from sysjob.sysjobs;\""
+}
+#==============================================================#
+##bak_data
+#==============================================================#
+sel_bak_data() {
+    log_print "数据库备份目录和数据目录 信息" "select top 1  name,command from \"SYSJOB\".\"SYSJOBSTEPS\";select path from v\$datafile;"
+    su - dmdba -c "$sqlCli  \"select top 1  name,command from \"SYSJOB\".\"SYSJOBSTEPS\";select path from v\\\$datafile;\""
+}
+#==============================================================#
+##svr_log
+#==============================================================#
+sel_svr_log() {
+    log_print "数据库异步追踪日志 信息" "select para_name,para_value from v\$dm_ini where para_name='SVR_LOG';"
+    su - dmdba -c "$sqlCli  \"select para_name,para_value from v\\\$dm_ini where para_name='SVR_LOG';\""
+}
+#==============================================================#
+##用户
+#==============================================================#
+sel_users() {
+    log_print "数据库用户信息 信息" "select username from dba_users where account_status='OPEN';"
+    su - dmdba -c "$sqlCli  \"select username from dba_users where account_status='OPEN';\""
+}
+#==============================================================#
+##表空间
+#==============================================================#
+sel_tabspace() {
+    log_print "数据库表空间 信息" "select username,default_tablespace from dba_users where account_status='OPEN';"
+    su - dmdba -c "$sqlCli  \"select username,default_tablespace from dba_users where account_status='OPEN';\""
+}
+#==============================================================#
+##授权
+#==============================================================#
+sel_grant() {
+    log_print "数据库角色 信息" "select grantee,granted_role from dba_role_privs where granted_role='DBA';"
+    su - dmdba -c "$sqlCli  \"select grantee,granted_role from dba_role_privs where granted_role='DBA';\""
+}
+#==============================================================#
+##历史
+#==============================================================#
+sel_dead_his() {
+    log_print "数据库死锁 信息" "select * from v\$deadlock_history;"
+    su - dmdba -c "$sqlCli  \"select * from v\\\$deadlock_history;\""
+}
+#==============================================================#
+##历史
+#==============================================================#
+sel_run_his() {
+    log_print "数据库历史SQL错误 信息" "select * from v\$runtime_err_history;"
+    su - dmdba -c "$sqlCli  \"select * from v\\\$runtime_err_history;\""
+}
+#==============================================================#
+##历史
+#==============================================================#
+sel_ins_his() {
+    log_print "数据库运行日志错误 信息" "select *  from v\$instance_log_history where level$ in ('ERROR','FATAL');"
+    su - dmdba -c "$sqlCli  \"select *  from v\\\$instance_log_history where level$ in ('ERROR','FATAL');\""
+}
+
+main() {
+    while [[ $1 ]]; do
+        case $1 in
+        -dh | --dm_home)
+            dm_home=$2
+            shift 2
+            ;;
+        -sp | --sysdba_pwd)
+            if [[ $2 ]]; then
+                sysdba_pwd=$2
+            else
+                color_printf red "请检查参数 [-sp, --sysdba_pwd] 的值是否为空！"
+                exit 99
+            fi
+            shift 2
+            ;;
+        -hs | --host)
+            host=$2
+            shift 2
+            ;;
+        -pn | --port_num)
+            port_num=$2
+            shift 2
+            ;;
+        -h | --help)
+            help
+            ;;
+        *)
+            color_printf red "脚本已退出巡检，请检查是否参数是否正确，可以查看脚本帮助：'DMCheckInstall --help' 获取更多信息！"
+            exit 99
+            ;;
+        *) break ;;
+        esac
+    done
+    test_login_db
+    cpu_info | tee $DMCheck
+    ram_info | tee -a $DMCheck
+    disk_info | tee -a $DMCheck
+    uuid_info | tee -a $DMCheck
+    disk_sch | tee -a $DMCheck
+    swap_info | tee -a $DMCheck
+    os_version | tee -a $DMCheck
+    os_user | tee -a $DMCheck
+    disk_io | tee -a $DMCheck
+    nic_info | tee -a $DMCheck
+    firewall_info | tee -a $DMCheck
+    uli_sys | tee -a $DMCheck
+    ser_date | tee -a $DMCheck
+    dm_pid | tee -a $DMCheck
+    sel_ver | tee -a $DMCheck
+    sel_lic | tee -a $DMCheck
+    sel_ini_par | tee -a $DMCheck
+    sel_para | tee -a $DMCheck
+    db_info | tee -a $DMCheck
+    sel_redo | tee -a $DMCheck
+    sel_arch | tee -a $DMCheck
+    sel_data_arch | tee -a $DMCheck
+    sel_bak | tee -a $DMCheck
+    sel_bak_data | tee -a $DMCheck
+    sel_svr_log | tee -a $DMCheck
+    sel_users | tee -a $DMCheck
+    sel_tabspace | tee -a $DMCheck
+    sel_grant | tee -a $DMCheck
+    sel_dead_his | tee -a $DMCheck
+    sel_run_his | tee -a $DMCheck
+    sel_ins_his | tee -a $DMCheck
+}
+main "$@"
