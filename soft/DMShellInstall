@@ -247,7 +247,7 @@ function check_ip() {
       exit 99
     fi
     ## 检测 IP地址是否可以ping通
-    ping -c 2 $i >/dev/null 2>&1  && arp $i
+    ping -c 2 $i >/dev/null 2>&1
     if [ $? -ne 0 ]; then
       echo
       color_printf red "请检查参数 [$2, $3] 的 IP 地址 $i 是否正确！"
