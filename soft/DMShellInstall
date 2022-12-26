@@ -553,7 +553,7 @@ function conf_firewall() {
       systemctl stop firewalld.service
       systemctl disable firewalld.service -q
     fi
-    systemctl status firewalld
+    systemctl status firewalld -q
   fi
 }
 
@@ -611,7 +611,7 @@ EOF
   else
     timedatectl set-timezone Asia/Shanghai
     [[ $(systemctl status chronyd | grep -c running) > 0 ]] && systemctl stop chronyd.service && systemctl disable chronyd.service -q
-    systemctl status chronyd
+    systemctl status chronyd -q
   fi
   ## configure ntpdate
   if [[ $timeserver_ip ]]; then
