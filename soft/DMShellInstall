@@ -610,7 +610,7 @@ EOF
     [ -e /etc/ntp.conf ] && mv /etc/ntp.conf /etc/ntp.conf.$current
   else
     timedatectl set-timezone Asia/Shanghai
-    [[ $(systemctl status chronyd | grep -c running) > 0 ]] && systemctl stop chronyd.service && systemctl disable chronyd.service
+    [[ $(systemctl status chronyd | grep -c running) > 0 ]] && systemctl stop chronyd.service && systemctl disable chronyd.service -q
     systemctl status chronyd
   fi
   ## configure ntpdate
