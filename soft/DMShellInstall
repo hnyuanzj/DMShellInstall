@@ -2930,6 +2930,8 @@ EOF
       done
       optimize_dmdb
     fi
+    ssh ${wc_pubip_array[$((x - 1))]} "sed -i '4s/0/90/g' $data_dir/$dsc_db_name/dmdcr.ini"
+    ssh ${wc_pubip_array[$((x - 1))]} "sed -i '6s/0/180/g' $data_dir/$dsc_db_name/dmdcr.ini"
   done
 
 }
