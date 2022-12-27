@@ -2883,6 +2883,11 @@ function dsc_start() {
       break
     fi
   done
+
+  #修改数据css自动拉起参数
+  sed -i '4s/0/90/g' $data_dir/$dsc_db_name/dmdcr.ini
+  sed -i '6s/0/180/g' $data_dir/$dsc_db_name/dmdcr.ini
+
   cat <<EOF >>$software_dir/starttmp.sh
 #!/bin/bash
 $env_dm_home/script/root/dm_service_installer.sh -t dmserver -dm_ini $data_dir/$dsc_db_name/$dsc_ep_name$(($node_num - 1))_config/dm.ini -dcr_ini $data_dir/$dsc_db_name/dmdcr.ini -p $dsc_db_name -y DmASMSvrServiceAsmsvr
@@ -2910,6 +2915,11 @@ EOF
     ssh ${wc_pubip_array[$x]} "sh $software_dir/starttmp.sh"
     color_printf blue "节点 ${wc_pubip_array[$x]} 启动成功"
     echo
+
+    ## 修改数据库自动拉起参数
+    ssh ${wc_pubip_array[$x]} "sed -i '4s/0/90/g' $data_dir/$dsc_db_name/dmdcr.ini"
+    ssh ${wc_pubip_array[$x]} "sed -i '6s/0/180/g' $data_dir/$dsc_db_name/dmdcr.ini"
+
     if ((${x} == ${lastIndex})); then
       log_print "创建数据库归档" ""
       while true; do
@@ -2930,8 +2940,6 @@ EOF
       done
       optimize_dmdb
     fi
-    ssh ${wc_pubip_array[$((x - 1))]} "sed -i '4s/0/90/g' $data_dir/$dsc_db_name/dmdcr.ini"
-    ssh ${wc_pubip_array[$((x - 1))]} "sed -i '6s/0/180/g' $data_dir/$dsc_db_name/dmdcr.ini"
   done
 
 }
