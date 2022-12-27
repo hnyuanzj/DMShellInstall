@@ -2643,9 +2643,9 @@ function dsc_dmdcr() {
 DMDCR_PATH                 = /dev/asmdisk/${asm_disk_arr[0]}01
 DMDCR_MAL_PATH             = $data_dir/$dsc_db_name/dmasvrmal.ini
 DMDCR_SEQNO                = $(($node_num - 1)) 
-DMDCR_ASM_RESTART_INTERVAL = 60
+DMDCR_ASM_RESTART_INTERVAL = 0
 DMDCR_ASM_STARTUP_CMD      = $env_dm_home/bin/dmasmsvr dcr_ini=$data_dir/$dsc_db_name/dmdcr.ini
-DMDCR_DB_RESTART_INTERVAL  = 120
+DMDCR_DB_RESTART_INTERVAL  = 0
 DMDCR_DB_STARTUP_CMD       = $env_dm_home/bin/dmserver path=$data_dir/$dsc_db_name/$dsc_ep_name$(($node_num - 1))_config/dm.ini dcr_ini=$data_dir/$dsc_db_name/dmdcr.ini
 EOF
 DMDCR
