@@ -2983,7 +2983,7 @@ EOF
         color_printf blue "在节点 ${wc_pubip_array[$y]} 创建归档"
         echo
         ssh ${wc_pubip_array[$y]} "su - dmdba -c \"disql -S SYSDBA/SYSDBA:$port_num '\\\`/home/dmdba/scripts/conf_arch.sql'\""
-        ssh ${wc_pubip_array[$y]} "sed -i '4i ARCH_LOCAL_SHARE=1\n' $data_dir/$dsc_db_name/$dsc_ep_name/dmarch.ini"
+        ssh ${wc_pubip_array[$y]} "sed -i '4i ARCH_LOCAL_SHARE=1\n' $data_dir/$dsc_db_name/$dsc_ep_name${y}_config/dmarch.ini"
       done
       optimize_dmdb
     fi
