@@ -524,6 +524,44 @@ function print_sysinfo() {
   df -h
 }
 
+function conf_yum() {
+
+  ## 检查 ISO 是否已挂载
+  mountPatch=$(mount | grep -E "iso|iso" | head -n1 | awk '{print $3}')
+  if [[ $mountPatch ]]; then
+    ## 防止操作系统提示未注册
+    [[ -e /etc/yum/pluginconf.d/subscription-manager.conf ]] && sed -i 's/enabled=1/enabled=0/' /etc/yum/pluginconf.d/subscription-manager.conf
+    ## 备份原有的yum配置文件
+    mkdir /etc/yum.repos.d/bak -p && nohup mv /etc/yum.repos.d/* /etc/yum.repos.d/bak >/dev/null 2>&1
+    if [[ $os_version = "6" || $os_version = "7" ]]; then
+      cat <<-EOF >/etc/yum.repos.d/local.repo
+[server]
+name=server
+baseurl=file://$mountPatch
+enabled=1
+gpgcheck=0
+EOF
+    elif [[ $os_version = "8" || $os_version = "V10" ]]; then
+      cat <<-EOF >/etc/yum.repos.d/local.repo
+[BaseOS]
+name=BaseOS
+baseurl=file://$mountPatch/BaseOS
+enabled=1
+gpgcheck=0
+[AppStream]
+name=AppStream
+baseurl=file://$mountPatch/AppStream
+enabled=1
+gpgcheck=0
+EOF
+    fi
+  else
+    color_printf red "操作系统 ISO 镜像未挂载，且 -oi 参数配置为 Y，请先挂载操作系统镜像！"
+    exit 99
+  fi
+
+}
+
 #==============================================================#
 #                         关闭 SWAP 功能                        #
 #==============================================================#
@@ -3784,53 +3822,24 @@ EOF
         fi
         check_disk $data_disk -dad --data_disk
       fi
-
-    fi
-
-    ## 安装 DW/DSC 时，多节点互信需要配置 yum 源，判断是否需要挂载操作系统 ISO 镜像，如果需要挂载则自动配置 yum 源；如果不需要挂载，则默认自行配置 yum 源
-    if [[ $dm_install_mode == "datawatch" || $dm_install_mode == "dsc" ]]; then
-      if [[ $os_iso = "Y" ]]; then
-        ## 检查 ISO 是否已挂载
-        mountPatch=$(mount | grep -E "iso|iso" | head -n1 | awk '{print $3}')
-        if [[ $mountPatch ]]; then
-          ## 防止操作系统提示未注册
-          [[ -e /etc/yum/pluginconf.d/subscription-manager.conf ]] && sed -i 's/enabled=1/enabled=0/' /etc/yum/pluginconf.d/subscription-manager.conf
-          ## 备份原有的yum配置文件
-          mkdir /etc/yum.repos.d/bak -p && nohup mv /etc/yum.repos.d/* /etc/yum.repos.d/bak >/dev/null 2>&1
-          if [[ $os_version = "6" || $os_version = "7" ]]; then
-            cat <<-EOF >/etc/yum.repos.d/local.repo
-[server]
-name=server
-baseurl=file://$mountPatch
-enabled=1
-gpgcheck=0
-EOF
-          elif [[ $os_version = "8" || $os_version = "V10" ]]; then
-            cat <<-EOF >/etc/yum.repos.d/local.repo
-[BaseOS]
-name=BaseOS
-baseurl=file://$mountPatch/BaseOS
-enabled=1
-gpgcheck=0
-[AppStream]
-name=AppStream
-baseurl=file://$mountPatch/AppStream
-enabled=1
-gpgcheck=0
-EOF
-          fi
-        else
-          color_printf red "操作系统 ISO 镜像未挂载，且 -oi 参数配置为 Y，请先挂载操作系统镜像！"
-          exit 99
-        fi
-      fi
     fi
   fi
 
-  if [[ $dm_install_mode = "datawatch" ]]; then
-    install_dw
-  elif [[ $dm_install_mode = "dsc" ]]; then
-    install_dsc
+  ## 安装 DW/DSC 时，多节点互信需要配置 yum 源，判断是否需要挂载操作系统 ISO 镜像，如果需要挂载则自动配置 yum 源；如果不需要挂载，则默认自行配置 yum 源
+  if [[ $os_iso = "Y" ]]; then
+    if [[ $dm_install_mode = "datawatch" ]]; then
+      if [[ $node_num = 1 ]]; then
+        conf_yum
+      fi
+      install_dw
+    elif [[ $dm_install_mode = "dsc" ]]; then
+      if [[ $multipath = "Y" && $disk_list_arr[0] =~ "dev" ]]; then
+        conf_yum
+      elif [[ $node_num = 1 ]]; then
+        conf_yum
+      fi
+      install_dsc
+    fi
   fi
 
   color_printf blue "达梦数据库开始安装："
