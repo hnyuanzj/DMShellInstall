@@ -2262,10 +2262,14 @@ EOF
 #==============================================================#
 function get_uuid() {
 
-  if [[ $os_version = "6" ]]; then
-    /sbin/scsi_id -g -u $1
+  if [[ $(udevadm info --query=all --name=$1 | grep -i ID_PART_ENTRY_UUID | wc -l) > 0 ]]; then
+    udevadm info --query=all --name=$1 | grep -i ID_PART_ENTRY_UUID | awk -F'=' '{print $2}'
   else
-    /usr/lib/udev/scsi_id -g -u $1
+    if [[ $os_version = "6" ]]; then
+      /sbin/scsi_id -g -u $1
+    else
+      /usr/lib/udev/scsi_id -g -u $1
+    fi
   fi
 
 }
@@ -2393,7 +2397,11 @@ EOF
     if [[ $os_version = "6" ]]; then
       echo "KERNEL==\"sd*\", BUS==\"scsi\", PROGRAM==\"/sbin/scsi_id --whitelisted --replace-whitespace --device=/dev/\$name\", RESULT==\"$(get_uuid $1)\", SYMLINK+=\"asmdisk/$2\", OWNER=\"dmdba\", GROUP=\"dinstall\", MODE=\"0660\"" >>/etc/udev/rules.d/99-dm-asmdevices.rules
     else
-      echo "KERNEL==\"sd*\", SUBSYSTEM==\"block\", PROGRAM==\"/usr/lib/udev/scsi_id --whitelisted --replace-whitespace --device=/dev/\$name\", RESULT==\"$(get_uuid $1)\", SYMLINK+=\"asmdisk/$2\", OWNER=\"dmdba\", GROUP=\"dinstall\", MODE=\"0660\"" >>/etc/udev/rules.d/99-dm-asmdevices.rules
+      if [[ $(udevadm info --query=all --name=$1 | grep -i ID_PART_ENTRY_UUID | wc -l) > 0 ]]; then
+        echo "KERNEL==\"sd*\", ENV{ID_PART_ENTRY_UUID}==\"$(get_uuid $1)\", SYMLINK+=\"asmdisk/$2\", OWNER=\"dmdba\", GROUP=\"dinstall\", MODE=\"0660\"" >>/etc/udev/rules.d/99-dm-asmdevices.rules
+      else
+        echo "KERNEL==\"sd*\", SUBSYSTEM==\"block\", PROGRAM==\"/usr/lib/udev/scsi_id --whitelisted --replace-whitespace --device=/dev/\$name\", RESULT==\"$(get_uuid $1)\", SYMLINK+=\"asmdisk/$2\", OWNER=\"dmdba\", GROUP=\"dinstall\", MODE=\"0660\"" >>/etc/udev/rules.d/99-dm-asmdevices.rules
+      fi
     fi
   fi
 
@@ -3826,20 +3834,19 @@ EOF
   fi
 
   ## 安装 DW/DSC 时，多节点互信需要配置 yum 源，判断是否需要挂载操作系统 ISO 镜像，如果需要挂载则自动配置 yum 源；如果不需要挂载，则默认自行配置 yum 源
-  if [[ $os_iso = "Y" ]]; then
-    if [[ $dm_install_mode = "datawatch" ]]; then
-      if [[ $node_num = 1 ]]; then
-        conf_yum
-      fi
-      install_dw
-    elif [[ $dm_install_mode = "dsc" ]]; then
-      if [[ $multipath = "Y" && $disk_list_arr[0] =~ "dev" ]]; then
-        conf_yum
-      elif [[ $node_num = 1 ]]; then
-        conf_yum
-      fi
-      install_dsc
+
+  if [[ $dm_install_mode = "datawatch" ]]; then
+    if [[ $node_num = 1 && $os_iso = "Y" ]]; then
+      conf_yum
     fi
+    install_dw
+  elif [[ $dm_install_mode = "dsc" ]]; then
+    if [[ $multipath = "Y" && $disk_list_arr[0] =~ "dev" ]]; then
+      conf_yum
+    elif [[ $node_num = 1 && $os_iso = "Y" ]]; then
+      conf_yum
+    fi
+    install_dsc
   fi
 
   color_printf blue "达梦数据库开始安装："
