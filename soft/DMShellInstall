@@ -923,10 +923,11 @@ function mount_iso() {
 #==============================================================#
 function install_dmdb() {
   log_print "安装达梦数据库软件" ""
+  local lang=zh
   if [[ $(echo $LANG) = "en_US.UTF8" ]]; then
-    local lang=en
+    $lang=en
   elif [[ $(echo $LANG) = "en_US.UTF8" ]]; then
-    local lang=zh
+    $lang=zh
   fi
   ## 生成 auto_install.xml
   cat <<-EOF >$software_dir/auto_install.xml
