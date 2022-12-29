@@ -3001,7 +3001,7 @@ EOF
         PID=$(ps -ef | grep $data_dir/$dsc_db_name/dm.ini | grep -v grep | grep -v $$ | awk '{print $2}')
         if [ -n $PID ]; then
           connResult=$(su - dmdba -c "disql -S -L SYSDBA/SYSDBA:$port_num -c \"set heading off\" -e 'select 1'" | awk END{print})
-          if [ $connResult = 1 ]; then
+          if [[ $connResult = 1 ]]; then
             break
           fi
         fi
