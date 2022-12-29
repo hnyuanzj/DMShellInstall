@@ -853,11 +853,22 @@ EOF
 #==============================================================#
 function drop_cache() {
   log_print "配置cache脚本" ""
+  if [[ -e /var/spool/cron/root ]]; then
+    bak_file /var/spool/cron/root
+  else
+    touch /var/spool/cron/root
+  fi
   touch /root/drop_cache.sh
   chmod +x /root/drop_cache.sh
-  echo "sync" >>/root/drop_cache.sh
-  echo "echo 1 > /proc/sys/vm/drop_caches" >>/root/drop_cache.sh
-  echo "* 6 * * * /root/drop_cache.sh" >>/var/spool/cron/root
+  cat <<-EOF >/root/drop_cache.sh
+#!/bin/bash
+sync
+echo 1 > /proc/sys/vm/drop_caches
+EOF
+  cat <<-EOF >/var/spool/cron/root
+# DMBegin
+* 6 * * * /root/drop_cache.sh
+EOF
   cat /root/drop_cache.sh && crontab -l
 }
 
@@ -942,13 +953,17 @@ EOF
   if [[ $dm_iso_name && -e /dmiso/DMInstall.bin ]]; then
     /dmiso/DMInstall.bin -q $software_dir/auto_install.xml
     if [[ $dm_install_mode = "dsc" ]]; then
-      ln -s $env_dm_home/bin/*.so /lib64
+      if [[ $(ls -lh /lib64/*.so | grep libdm | wc -l) -le 6 ]]; then
+        ln -s $env_dm_home/bin/*.so /lib64
+      fi
     fi
   elif [[ -e $software_dir/DMInstall.bin ]]; then
     chmod +x $software_dir/DMInstall.bin
     $software_dir/DMInstall.bin -q $software_dir/auto_install.xml
     if [[ $dm_install_mode = "dsc" ]]; then
-      ln -s $env_dm_home/bin/*.so /lib64
+      if [[ $(ls -lh /lib64/*.so | grep libdm | wc -l) -le 6 ]]; then
+        ln -s $env_dm_home/bin/*.so /lib64
+      fi
     fi
   else
     color_printf red "抱歉，没有找到达梦安装程序 DMInstall.bin，无法继续安装！"
@@ -2358,6 +2373,19 @@ function check_disk() {
     fi
   fi
 
+  #清空磁盘
+  if [[ -e /home/dmdba/.bash_profile && $(grep -E -c "# DMBegin" /home/dmdba/.bash_profile) = 1 ]]; then
+    for i in ${disk_list_tmp[@]}; do
+      while true; do
+        sleep 5s
+        dd if=/dev/zero of=$i bs=100M count=10 >/dev/null 2>&1
+        if [ $? -eq 0 ]; then
+          break
+        fi
+      done
+    done
+  fi
+
   if [[ $fil_disk ]]; then
     for i in ${disk_list_tmp[@]}; do
       echo "$(get_uuid $i) $i $(disk_storage $i)" >>$software_dir/disk_storage_tmp
@@ -2931,10 +2959,10 @@ function dsc_start() {
   done
 
   #修改数据css自动拉起参数
-  sed -i '4s/0/90/g' $data_dir/$dsc_db_name/dmdcr.ini
-  sed -i '6s/0/180/g' $data_dir/$dsc_db_name/dmdcr.ini
+  sed -i '4s/0/180/g' $data_dir/$dsc_db_name/dmdcr.ini
+  sed -i '6s/0/360/g' $data_dir/$dsc_db_name/dmdcr.ini
 
-  cat <<EOF >>$software_dir/starttmp.sh
+  cat <<EOF >$software_dir/starttmp.sh
 #!/bin/bash
 $env_dm_home/script/root/dm_service_installer.sh -t dmserver -dm_ini $data_dir/$dsc_db_name/$dsc_ep_name$(($node_num - 1))_config/dm.ini -dcr_ini $data_dir/$dsc_db_name/dmdcr.ini -p $dsc_db_name -y DmASMSvrServiceAsmsvr
 echo
@@ -2963,8 +2991,8 @@ EOF
     echo
 
     ## 修改数据库自动拉起参数
-    ssh ${wc_pubip_array[$x]} "sed -i '4s/0/90/g' $data_dir/$dsc_db_name/dmdcr.ini"
-    ssh ${wc_pubip_array[$x]} "sed -i '6s/0/180/g' $data_dir/$dsc_db_name/dmdcr.ini"
+    ssh ${wc_pubip_array[$x]} "sed -i '4s/0/180/g' $data_dir/$dsc_db_name/dmdcr.ini"
+    ssh ${wc_pubip_array[$x]} "sed -i '6s/0/360/g' $data_dir/$dsc_db_name/dmdcr.ini"
 
     if ((${x} == ${lastIndex})); then
       log_print "创建数据库归档" ""
