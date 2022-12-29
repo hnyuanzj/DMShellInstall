@@ -923,12 +923,17 @@ function mount_iso() {
 #==============================================================#
 function install_dmdb() {
   log_print "安装达梦数据库软件" ""
+  if [[ $(echo $LANG) = "en_US.UTF8" ]]; then
+    local lang=en
+  elif [[ $(echo $LANG) = "en_US.UTF8" ]]; then
+    local lang=zh
+  fi
   ## 生成 auto_install.xml
   cat <<-EOF >$software_dir/auto_install.xml
 <?xml version="1.0"?>
 <DATABASE>
     <!--安装数据库的语言配置，安装中文版配置ZH，英文版配置EN，不区分大小写。不允许为空。 -->
-    <LANGUAGE>zh</LANGUAGE>
+    <LANGUAGE>$lang</LANGUAGE>
 
     <!--安装程序的时区配置，缺省为+08:00，取值范围：-12:59 ~ +14:00 -->
     <TIME_ZONE>+08:00</TIME_ZONE>
