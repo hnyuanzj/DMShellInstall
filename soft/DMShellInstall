@@ -3003,7 +3003,7 @@ EOF
     scp -r "$data_dir"/"$dsc_db_name"/"$dsc_ep_name"${x}_config "${wc_pubip_array[$x]}":"$data_dir"/"$dsc_db_name"/ >/dev/null 2>&1
     ssh "${wc_pubip_array[$x]}" "chown -R dmdba.dinstall $data_dir/$dsc_db_name/$dsc_ep_name${x}_config"
     scp -r "$software_dir"/starttmp.sh "${wc_pubip_array[$x]}":"$software_dir"/starttmp.sh >/dev/null 2>&1
-    ssh "${wc_pubip_array[$x]}" "sed -i '2s/'((node_num - 1))'/'x'/g' $software_dir/starttmp.sh"
+    ssh "${wc_pubip_array[$x]}" "sed -i '2s/'$((node_num - 1))'/'$x'/g' $software_dir/starttmp.sh"
     ssh "${wc_pubip_array[$x]}" "sh $software_dir/starttmp.sh"
     color_printf blue "节点 ${wc_pubip_array[$x]} 启动成功"
     echo
