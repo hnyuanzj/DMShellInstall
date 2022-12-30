@@ -3101,7 +3101,7 @@ function send_other_node() {
     echo
     ssh "${wc_pubip_array[$i]}" "[[ -f $software_dir || -d $software_dir ]] && rm -rf $software_dir ; mkdir -p $software_dir"
     scp "$software_dir"/dwnode.sh "${wc_pubip_array[$i]}":"$software_dir"
-    ssh "${wc_pubip_array[$i]}" "echo -n \" -node ((i + 1))\" >>$software_dir/dwnode.sh"
+    ssh "${wc_pubip_array[$i]}" "echo -n \" -node $((i + 1))\" >>$software_dir/dwnode.sh"
     scp "$software_dir"/DMShellInstall "${wc_pubip_array[$i]}":"$software_dir"
     if [[ $dm_iso_name ]]; then
       scp "$software_dir"/"$dm_iso_name" "${wc_pubip_array[$i]}":"$software_dir"
