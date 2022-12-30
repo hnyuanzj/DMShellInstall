@@ -3003,7 +3003,7 @@ EOF
     scp -r "$data_dir"/"$dsc_db_name"/"$dsc_ep_name"${x}_config "${wc_pubip_array[$x]}":"$data_dir"/"$dsc_db_name"/ >/dev/null 2>&1
     ssh "${wc_pubip_array[$x]}" "chown -R dmdba.dinstall $data_dir/$dsc_db_name/$dsc_ep_name${x}_config"
     scp -r "$software_dir"/starttmp.sh "${wc_pubip_array[$x]}":"$software_dir"/starttmp.sh >/dev/null 2>&1
-    ssh "${wc_pubip_array[$x]}" "sed -i '2s/'$((node_num - 1))'/'$x'/g' $software_dir/starttmp.sh"
+    ssh "${wc_pubip_array[$x]}" "sed -i '2s/'((node_num - 1))'/'x'/g' $software_dir/starttmp.sh"
     ssh "${wc_pubip_array[$x]}" "sh $software_dir/starttmp.sh"
     color_printf blue "节点 ${wc_pubip_array[$x]} 启动成功"
     echo
@@ -3101,7 +3101,7 @@ function send_other_node() {
     echo
     ssh "${wc_pubip_array[$i]}" "[[ -f $software_dir || -d $software_dir ]] && rm -rf $software_dir ; mkdir -p $software_dir"
     scp "$software_dir"/dwnode.sh "${wc_pubip_array[$i]}":"$software_dir"
-    ssh "${wc_pubip_array[$i]}" "echo -n \" -node $((i + 1))\" >>$software_dir/dwnode.sh"
+    ssh "${wc_pubip_array[$i]}" "echo -n \" -node ((i + 1))\" >>$software_dir/dwnode.sh"
     scp "$software_dir"/DMShellInstall "${wc_pubip_array[$i]}":"$software_dir"
     if [[ $dm_iso_name ]]; then
       scp "$software_dir"/"$dm_iso_name" "${wc_pubip_array[$i]}":"$software_dir"
