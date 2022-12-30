@@ -16,7 +16,7 @@
 ## 数据库的节点号，默认为 1
 node_num=1
 ## 安装脚本以及软件包存放位置
-software_dir=$(dirname $(readlink -f $0))
+software_dir=$(dirname "$(readlink -f "$0")")
 ## 达梦数据库安装日志
 dminstalllog=$software_dir/print_dm_install_$(date +"20%y%m%d%H%M%S").log
 ## 系统当前时间
@@ -112,8 +112,6 @@ os_iso=Y
 #==============================================================#
 #                         数据守护全局变量                      #
 #==============================================================#
-## 数据守护实例名数组
-declare -a dw_instname_array
 ## 守护进程组名
 dw_group_name=GRP1
 ## MAL 监听端口，默认为 5336
@@ -167,21 +165,18 @@ asvrmal_mal_port=7236
 ##定义多路径参数
 typeset -u multipath
 multipath=N
-##定义asm磁盘路径
-typeset -l asm_path
-asm_path=
 #==============================================================#
 #                          UPPERCASE                           #
 #==============================================================#
 function upper() {
-  echo $1 | tr '[a-z]' '[A-Z]'
+  echo "$1" | tr '[:lower:]' '[:upper:]'
 }
 
 #==============================================================#
 #                          LOWERCASE                           #
 #==============================================================#
 function lower() {
-  echo $1 | tr '[A-Z]' '[a-z]'
+  echo "$1" | tr '[:upper:]' '[:lower:]'
 }
 
 #==============================================================#
@@ -224,12 +219,12 @@ function log_print() {
 function bak_file() {
   local file_path=$1
   ## check file with " # DMBegin"
-  if [[ $(grep -E -c "# DMBegin" $file_path) = 0 ]]; then
-    nohup \cp -rv $file_path{,.original} >/dev/null 2>&1
+  if [[ $(grep -E -c "# DMBegin" "$file_path") = 0 ]]; then
+    nohup command cp -rv "$file_path"{,.original} >/dev/null 2>&1
   else
     ## Backup current file, restore original file
-    nohup \cp -rv $file_path{,.$current} >/dev/null 2>&1
-    nohup \cp -rv $file_path{.original,} >/dev/null 2>&1
+    nohup command cp -rv "$file_path"{,."$current"} >/dev/null 2>&1
+    nohup command cp -rv "$file_path"{.original,} >/dev/null 2>&1
   fi
 }
 
@@ -237,9 +232,10 @@ function bak_file() {
 #                       检查 IP 是否合法                         #
 #==============================================================#
 function check_ip() {
+
   for i in ${1//,/ }; do
     ## 检查 IP 是否合法
-    valid_check=$([[ $(echo $i | grep -E "^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$") && $(echo $i | awk -F. '$1<=255&&$2<=255&&$3<=255&&$4<=255') ]] && echo "true" || echo "false")
+    valid_check=$([[ $(echo "$i" | grep -E "^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$") && $(echo "$i" | awk -F"." '$1<=255&&$2<=255&&$3<=255&&$4<=255') ]] && echo "true" || echo "false")
     if [[ $valid_check = "false" ]]; then
       echo
       color_printf red "请检查参数 [$2, $3] 的 IP 地址 $i 是否合法！"
@@ -247,7 +243,7 @@ function check_ip() {
       exit 99
     fi
     ## 检测 IP地址是否可以ping通
-    ping -c 2 $i >/dev/null 2>&1
+    ping -c 2 "$i" >/dev/null 2>&1
     if [ $? -ne 0 ]; then
       echo
       color_printf red "请检查参数 [$2, $3] 的 IP 地址 $i 是否正确！"
@@ -270,7 +266,7 @@ function check_ip_arr() {
   ##输入的ip地址与本机ip地址校验
   ip_check=false
   for machine_ip in ${machine_ips}; do
-    if [[ $machine_ip = ${os_ip_arr[0]} ]]; then
+    if [[ $machine_ip = "${os_ip_arr[0]}" ]]; then
       ip_check=true
     fi
   done
@@ -282,11 +278,11 @@ function check_ip_arr() {
   fi
 
   ##校验ip地址是否合法正确
-  check_ip $1 $2 $3
+  check_ip "$1" "$2" "$3"
 
   if [[ $dm_install_mode = "datawatch" ]]; then
     ## 判断节点上限数量
-    if [[ ${#os_ip_arr[@]} < 2 || ${#os_ip_arr[@]} > 9 ]]; then
+    if [[ ${#os_ip_arr[@]} -lt 2 || ${#os_ip_arr[@]} -gt 9 ]]; then
       color_printf red "请检查参数 [$2, $3] ，至少需要 2 个 IP 地址，最多支持 9 个 IP 地址！"
       exit 99
     fi
@@ -314,16 +310,16 @@ function filter_arr() {
 #                         获取磁盘容量                          #
 #==============================================================#
 function disk_storage() {
-  lsblk -l | grep ${1##*/} | awk '{print $4}'
+  lsblk -l | grep "${1##*/}" | awk '{print $4}'
 }
 #==============================================================#
 #                         获取随机数                             #
 #==============================================================#
 function rand() {
   min=$1
-  max=$(($2 - $min + 1))
-  num=$(($RANDOM + 1000000000)) #增加一个10位的数再求余
-  echo $(($num % $max + $min))
+  max=$(($2 - min + 1))
+  num=$((RANDOM + 1000000000)) #增加一个10位的数再求余
+  echo $((num % max + min))
 }
 
 #==============================================================#
@@ -331,12 +327,12 @@ function rand() {
 #==============================================================#
 function ssh_check() {
   for ip in ${2//,/ }; do
-    su - $1 -c "ssh $ip -o PreferredAuthentications=publickey -o StrictHostKeyChecking=no echo "true"" >/dev/null 2>&1
+    su - "$1" -c "ssh $ip -o PreferredAuthentications=publickey -o StrictHostKeyChecking=no  "echo 'true'"" >/dev/null 2>&1
     if [ $? -ne 0 ]; then
       flag=false
     fi
   done
-  echo $flag
+  echo "$flag"
 }
 
 #==============================================================#
@@ -356,19 +352,19 @@ function ssh_trust() {
   fi
 
   ## 准备 $ssh_dir 目录
-  [[ -d $ssh_dir ]] && rm -rf $ssh_dir
-  mkdir -p $ssh_dir && chmod 755 $ssh_dir
+  [[ -d $ssh_dir ]] && rm -rf "$ssh_dir"
+  mkdir -p "$ssh_dir" && chmod 755 "$ssh_dir"
 
   ## 静默获取互信密钥
-  ssh-keygen -t rsa -P '' -f $ssh_dir/id_rsa -q
+  ssh-keygen -t rsa -P '' -f "$ssh_dir"/id_rsa -q
 
   ## 获取 authorized_keys
-  cat $ssh_dir/id_rsa.pub >>$ssh_dir/authorized_keys && chmod 644 $ssh_dir/authorized_keys
-  [[ ! -f $ssh_dir/known_hosts ]] && touch $ssh_dir/known_hosts
+  cat "$ssh_dir"/id_rsa.pub >>"$ssh_dir"/authorized_keys && chmod 644 "$ssh_dir"/authorized_keys
+  [[ ! -f $ssh_dir/known_hosts ]] && touch "$ssh_dir"/known_hosts
 
   ## 写入 IP 到 known_host
   for ip in ${host_ip//,/ }; do
-    [[ -z $(ssh-keygen -qF $ip) ]] && ssh-keyscan -t rsa,dsa,ecdsa $ip >>$ssh_dir/known_hosts
+    [[ -z $(ssh-keygen -qF "$ip") ]] && ssh-keyscan -t rsa,dsa,ecdsa "$ip" >>"$ssh_dir"/known_hosts
   done
 
   for ip in ${host_ip//,/ }; do
@@ -516,7 +512,7 @@ function print_sysinfo() {
   echo
   color_printf green "挂载信息: "
   echo
-  cat /etc/fstab | egrep -v '^#|^*#|^$'
+  grep </etc/fstab -E -v '^#|^*#|^$'
   ## 目录信息
   echo
   color_printf green "目录信息: "
@@ -532,7 +528,7 @@ function conf_yum() {
     ## 防止操作系统提示未注册
     [[ -e /etc/yum/pluginconf.d/subscription-manager.conf ]] && sed -i 's/enabled=1/enabled=0/' /etc/yum/pluginconf.d/subscription-manager.conf
     ## 备份原有的yum配置文件
-    mkdir /etc/yum.repos.d/bak -p && nohup mv /etc/yum.repos.d/* /etc/yum.repos.d/bak >/dev/null 2>&1
+    mkdir -p /etc/yum.repos.d/bak && nohup mv /etc/yum.repos.d/* /etc/yum.repos.d/bak >/dev/null 2>&1
     if [[ $os_version = "6" || $os_version = "7" ]]; then
       cat <<-EOF >/etc/yum.repos.d/local.repo
 [server]
@@ -568,11 +564,11 @@ EOF
 function conf_swap() {
   log_print "关闭 SWAP 功能" ""
   swapoff -a
-  nohup \cp -rv /etc/fstab{,.$current} >/dev/null 2>&1
+  nohup command cp -rv /etc/fstab{,."$current"} >/dev/null 2>&1
   sed -ri 's/.*swap.*/#&/' /etc/fstab
   free
   echo
-  cat /etc/fstab | grep -v "^$" | grep "swap"
+  grep </etc/fstab -v "^$" | grep "swap"
 }
 
 #==============================================================#
@@ -587,7 +583,7 @@ function conf_firewall() {
     chkconfig ip6tables off
     service iptables status
   else
-    if [[ $(systemctl status firewalld.service | grep -c running) > 0 ]]; then
+    if [[ $(systemctl status firewalld.service | grep -c running) -gt 0 ]]; then
       systemctl stop firewalld.service
       systemctl disable firewalld.service -q
     fi
@@ -603,7 +599,7 @@ function conf_selinux() {
   ## temporarily close selinux
   [[ $(getenforce) != "Disabled" ]] && /usr/sbin/setenforce 0
   sed -i 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config
-  cat /etc/selinux/config | egrep -v '^#|^*#|^$'
+  grep </etc/selinux/config -v '^#|^*#|^$'
 }
 
 #==============================================================#
@@ -612,20 +608,21 @@ function conf_selinux() {
 function conf_hostname() {
   log_print "配置主机名" ""
   if [[ $os_version = "6" ]]; then
-    local Hostname=$(grep -E "HOSTNAME=" /etc/sysconfig/network)
-    if [[ $(grep -E $hostname /etc/sysconfig/network) != $Hostname ]]; then
-      /bin/hostname $hostname
+    local Hostname
+    Hostname=$(grep -E "HOSTNAME=" /etc/sysconfig/network)
+    if [[ $(grep -E "$hostname" /etc/sysconfig/network) != "$Hostname" ]]; then
+      /bin/hostname "$hostname"
       ## change /proc/sys/kernel/hostname
-      sysctl kernel.hostname=$hostname
-      echo $hostname >/proc/sys/kernel/hostname
-      nohup \cp -rv /etc/sysconfig/network{,.$current} >/dev/null 2>&1
+      sysctl kernel.hostname="$hostname"
+      echo "$hostname" >/proc/sys/kernel/hostname
+      nohup command cp -rv /etc/sysconfig/network{,."$current"} >/dev/null 2>&1
       sed -i "s/$Hostname/HOSTNAME=$hostname/" /etc/sysconfig/network
     fi
-    echo $HOSTNAME
+    echo "$HOSTNAME"
   else
-    if [[ $(grep -E $hostname /etc/hostname) != $hostname ]]; then
-      nohup \cp -rv /etc/hostname{,.$current} >/dev/null 2>&1
-      /usr/bin/hostnamectl set-hostname $hostname
+    if [[ $(grep -E "$hostname" /etc/hostname) != "$hostname" ]]; then
+      nohup command cp -rv /etc/hostname{,."$current"} >/dev/null 2>&1
+      /usr/bin/hostnamectl set-hostname "$hostname"
     fi
     hostnamectl
   fi
@@ -638,28 +635,34 @@ function conf_ntp() {
   log_print "配置时间同步" ""
   if [[ $os_version = "6" ]]; then
     if [[ $(grep -E -c "Asia/Shanghai" /etc/sysconfig/clock) = 0 ]]; then
-      nohup \cp -rv /etc/sysconfig/clock{,.$current} >/dev/null 2>&1
-      nohup \cp -rv /usr/share/zoneinfo/Asia/Shanghai /etc/localtime >/dev/null 2>&1
+      nohup command cp -rv /etc/sysconfig/clock{,."$current"} >/dev/null 2>&1
+      nohup command cp -rv /usr/share/zoneinfo/Asia/Shanghai /etc/localtime >/dev/null 2>&1
       cat <<-EOF >/etc/sysconfig/clock
 ZONE="Asia/Shanghai"
 EOF
     fi
-    [[ $(chkconfig --list | grep ntpd | grep -c on) > 0 ]] && service ntpd stop && chkconfig ntpd off
-    [ -e /etc/ntp.conf ] && mv /etc/ntp.conf /etc/ntp.conf.$current
+    [[ $(chkconfig --list | grep ntpd | grep -c on) -gt 0 ]] && service ntpd stop && chkconfig ntpd off
+    [ -e /etc/ntp.conf ] && mv /etc/ntp.conf /etc/ntp.conf."$current"
   else
     timedatectl set-timezone Asia/Shanghai
-    [[ $(systemctl status chronyd | grep -c running) > 0 ]] && systemctl stop chronyd.service && systemctl disable chronyd.service -q
+    [[ $(systemctl status chronyd | grep -c running) -gt 0 ]] && systemctl stop chronyd.service && systemctl disable chronyd.service -q
     systemctl status chronyd -q
   fi
   ## configure ntpdate
   if [[ $timeserver_ip ]]; then
-    [[ ! -e /var/spool/cron/root ]] && touch /var/spool/cron/root || nohup \cp -rv /var/spool/cron/root{,.$current} >/dev/null 2>&1
+
+    if [[ ! -e /var/spool/cron/root ]]; then
+      touch /var/spool/cron/root
+    else
+      nohup command cp -rv /var/spool/cron/root{,."$current"} >/dev/null 2>&1
+    fi
+
     if [[ $os_version = "6" || $os_version = "7" ]]; then
       yum install -q -y ntpdate --skip-broken
       cat <<-EOF >/var/spool/cron/root
 00 01 * * * /usr/sbin/ntpdate -u $timeserver_ip && /usr/sbin/hwclock -w
 EOF
-      ntpdate -u $timeserver_ip && /usr/sbin/hwclock -w
+      ntpdate -u "$timeserver_ip" && /usr/sbin/hwclock -w
     elif [[ $os_version = "8" || $os_version = "V10" ]]; then
       cat <<-EOF >/var/spool/cron/root
 00 12 * * * /usr/sbin/chronyd -q \"server $timeserver_ip iburst \" && timedatectl set-local-rtc 0
@@ -677,15 +680,15 @@ EOF
 function conf_grub() {
   log_print "禁用透明大页 & 禁用NUMA & 开启 I/0 schedule" ""
   ## numa
-  if [[ $(grubby --info=ALL | grep numa=off | wc -l) = 0 ]]; then
+  if [[ $(grubby --info=ALL | grep -c numa=off) = 0 ]]; then
     grubby --update-kernel=ALL --args="numa=off"
   fi
   ## transparent_hugepage
-  if [[ $(grubby --info=ALL | grep transparent_hugepage=never | wc -l) = 0 ]]; then
+  if [[ $(grubby --info=ALL | grep -c transparent_hugepage=never) = 0 ]]; then
     grubby --update-kernel=ALL --args="transparent_hugepage=never"
   fi
   ## ASM I/O schedule
-  if [[ $(grubby --info=ALL | grep elevator=deadline | wc -l) = 0 ]]; then
+  if [[ $(grubby --info=ALL | grep -c elevator=deadline) = 0 ]]; then
     grubby --update-kernel=ALL --args="elevator=deadline"
   fi
   grubby --info=ALL | grep -B2 -i numa
@@ -699,10 +702,14 @@ function create_user() {
   ## create group
   [[ $(grep -E -c dinstall /etc/group) = 0 ]] && /usr/sbin/groupadd -g 54321 dinstall
   [[ $(grep -E -c dmdba /etc/group) = 0 ]] && /usr/sbin/groupadd -g 54322 dmdba
-  [[ $(grep -E -c dmdba /etc/passwd) = 0 ]] && /usr/sbin/useradd -u 54321 -g dinstall -G dmdba dmdba || /usr/sbin/usermod -g dinstall -G dmdba dmdba
-  echo $dm_passwd | passwd --stdin dmdba
+  if [[ $(grep -E -c dmdba /etc/passwd) = 0 ]]; then
+    /usr/sbin/useradd -u 54321 -g dinstall -G dmdba dmdba
+  else
+    /usr/sbin/usermod -g dinstall -G dmdba dmdba
+  fi
+  echo "$dm_passwd" | passwd --stdin dmdba
   echo
-  cat /etc/passwd | grep dmdba
+  grep </etc/passwd dmdba
   echo
   id dmdba
 }
@@ -711,22 +718,22 @@ function create_user() {
 #                         创建安装目录                           #
 #==============================================================#
 function create_dir() {
-  [[ -d $env_dm_home ]] && rm -rf $env_dm_home
-  mkdir -p $env_dm_home
-  [[ -d $data_dir ]] && rm -rf $data_dir
+  [[ -d $env_dm_home ]] && rm -rf "$env_dm_home"
+  mkdir -p "$env_dm_home"
+  [[ -d $data_dir ]] && rm -rf "$data_dir"
   if [[ $dm_install_mode = "dsc" ]]; then
-    mkdir -p $data_dir/$(upper $dsc_db_name)
+    mkdir -p "$data_dir"/"$(upper "$dsc_db_name")"
   else
-    mkdir -p $data_dir
+    mkdir -p "$data_dir"
   fi
-  [[ -d $backup_dir ]] && rm -rf $backup_dir
-  mkdir -p $backup_dir
-  [[ -d $arch_dir ]] && rm -rf $arch_dir
-  mkdir -p $arch_dir
+  [[ -d $backup_dir ]] && rm -rf "$backup_dir"
+  mkdir -p "$backup_dir"
+  [[ -d $arch_dir ]] && rm -rf "$arch_dir"
+  mkdir -p "$arch_dir"
   [[ -d $scripts_dir ]] && rm -rf $scripts_dir
   mkdir -p $scripts_dir
-  chown -R dmdba:dinstall {$scripts_dir,$data_dir,$backup_dir,$arch_dir,$env_dm_home}
-  chmod -R 775 {$scripts_dir,$data_dir,$backup_dir,$arch_dir,$env_dm_home}
+  chown -R dmdba:dinstall {$scripts_dir,"$data_dir","$backup_dir","$arch_dir","$env_dm_home"}
+  chmod -R 775 {$scripts_dir,"$data_dir","$backup_dir","$arch_dir","$env_dm_home"}
 }
 
 #==============================================================#
@@ -780,7 +787,7 @@ root  - nofile 131072
 root  - core   unlimited
 root  - data   unlimited
 EOF
-  cat /etc/security/limits.conf | egrep -v '^#|^*#|^$'
+  grep </etc/security/limits.conf -E -v '^#|^*#|^$'
   echo
 
   #达梦数据库服务注册为系统服务的进程，如通过systemctl或者service方式设定随机自启动的数据库服务，因为 CentOS7 / RHEL7 系统中使用 Systemd 替代了之前的 SysV，导致 /etc/security/limits.conf 文件的配置只适用于通过 PAM 认证登录用户的资源限制，对 systemd 的service 资源限制不生效。
@@ -791,7 +798,7 @@ DefaultLimitCORE=infinity
 DefaultLimitNOFILE=65536
 DefaultLimitNPROC=10240
 EOF
-    cat /etc/systemd/system.conf | egrep -v '^#|^*#|^$'
+    grep </etc/systemd/system.conf -E -v '^#|^*#|^$'
     echo
   fi
 
@@ -802,7 +809,7 @@ EOF
 session required pam_limits.so
 session required /lib64/security/pam_limits.so
 EOF
-  cat /etc/pam.d/login | egrep -v '^#|^*#|^$'
+  grep </etc/pam.d/login -E -v '^#|^*#|^$'
 }
 
 #==============================================================#
@@ -811,13 +818,13 @@ EOF
 function conf_ipc() {
   if [[ $os_version != "6" ]]; then
     log_print "禁用 RemoveIPC" ""
-    if [[ $(grep -E -c "#RemoveIPC=no" /etc/systemd/logind.conf) > 0 ]]; then
-      nohup \cp -rv /etc/systemd/logind.conf{,.$current} >/dev/null 2>&1
+    if [[ $(grep -E -c "#RemoveIPC=no" /etc/systemd/logind.conf) -gt 0 ]]; then
+      nohup command cp -rv /etc/systemd/logind.conf{,."$current"} >/dev/null 2>&1
       sed -i 's/#RemoveIPC=no/RemoveIPC=no/g' /etc/systemd/logind.conf
       systemctl daemon-reload
       systemctl restart systemd-logind
     fi
-    cat /etc/systemd/logind.conf | egrep -v '^#|^*#|^$'
+    grep </etc/systemd/logind.conf -E -v '^#|^*#|^$'
   fi
 }
 
@@ -828,7 +835,7 @@ function conf_lang() {
   log_print "配置语言中文" ""
   # 配置操作系统支持的所有字符集
   if [[ $os_version != "6" ]]; then
-    if [[ $(locale -a | grep "zh_CN.utf8") ]]; then
+    if locale -a | grep "zh_CN.utf8"; then
       cat <<-\EOF >>/etc/locale.conf
 LANG=zh_CN.utf8
 LC_CTYPE=zh_CN.utf8
@@ -840,11 +847,11 @@ EOF
     fi
   fi
 
-  if [[ $(cat /etc/profile | grep -c "export LANG=zh_CN.UTF-8") = 0 ]]; then
+  if [[ $(grep </etc/profile -c "export LANG=zh_CN.UTF-8") = 0 ]]; then
     bak_file /etc/profile
     echo 'export LANG=zh_CN.UTF-8' >>/etc/profile
     source /etc/profile
-    cat /etc/profile | grep "zh_CN.UTF-8"
+    grep </etc/profile "zh_CN.UTF-8"
   fi
 }
 
@@ -899,7 +906,7 @@ alias dsql="disql -L -S SYSDBA/'\"${sysdba_pwd//\$/\\\$}\"':$port_num \\\\\\\`"
 alias dssql="disql -L -S SYSDBA/'\"${sysdba_pwd//\$/\\\$}\"':$port_num \\\\\\\`"
 alias dmlog='cd \$DM_HOME/log'
 EOF
-  cat /home/dmdba/.bash_profile | egrep -v '^#|^$'
+  grep </home/dmdba/.bash_profile -E -v '^#|^$'
 }
 
 #==============================================================#
@@ -909,11 +916,15 @@ function mount_iso() {
   log_print "挂载达梦安装镜像" ""
   if [[ -d /dmiso ]]; then
     umount -f /dmiso
-    [[ ! -d /run/media/root/dameng ]] && mkdir -p /run/media/root/dameng || umount -f /run/media/root/dameng
-    mount -t auto -o ro -o loop $software_dir/$dm_iso_name /dmiso
+    if [[ ! -d /run/media/root/dameng ]]; then
+      mkdir -p /run/media/root/dameng
+    else
+      umount -f /run/media/root/dameng
+    fi
+    mount -t auto -o ro -o loop "$software_dir"/"$dm_iso_name" /dmiso
   else
     mkdir /dmiso
-    mount -t auto -o ro -o loop $software_dir/$dm_iso_name /dmiso
+    mount -t auto -o ro -o loop "$software_dir"/"$dm_iso_name" /dmiso
   fi
   ls -lrth /dmiso
 }
@@ -924,13 +935,13 @@ function mount_iso() {
 function install_dmdb() {
   log_print "安装达梦数据库软件" ""
   local lang=zh
-  if [[ $(echo $LANG) = "en_US.UTF8" ]]; then
-    $lang=en
-  elif [[ $(echo $LANG) = "en_US.UTF8" ]]; then
-    $lang=zh
+  if [[ "$LANG" = "en_US.UTF8" ]]; then
+    lang=en
+  elif [[ "$LANG" = "zh_CN.UTF8" ]]; then
+    lang=zh
   fi
   ## 生成 auto_install.xml
-  cat <<-EOF >$software_dir/auto_install.xml
+  cat <<-EOF >"$software_dir"/auto_install.xml
 <?xml version="1.0"?>
 <DATABASE>
     <!--安装数据库的语言配置，安装中文版配置ZH，英文版配置EN，不区分大小写。不允许为空。 -->
@@ -957,18 +968,18 @@ EOF
   ulimit -n 65536
   ## 新安装
   if [[ $dm_iso_name && -e /dmiso/DMInstall.bin ]]; then
-    /dmiso/DMInstall.bin -q $software_dir/auto_install.xml
+    /dmiso/DMInstall.bin -q "$software_dir"/auto_install.xml
     if [[ $dm_install_mode = "dsc" ]]; then
-      if [[ $(ls -lh /lib64/*.so | grep libdm | wc -l) -le 6 ]]; then
-        ln -s $env_dm_home/bin/*.so /lib64
+      if [[ $(find /lib64/* -maxdepth 1 -name "libdm*.so" | wc -l) -le 6 ]]; then
+        ln -s "$env_dm_home"/bin/*.so /lib64
       fi
     fi
   elif [[ -e $software_dir/DMInstall.bin ]]; then
-    chmod +x $software_dir/DMInstall.bin
-    $software_dir/DMInstall.bin -q $software_dir/auto_install.xml
+    chmod +x "$software_dir"/DMInstall.bin
+    "$software_dir"/DMInstall.bin -q "$software_dir"/auto_install.xml
     if [[ $dm_install_mode = "dsc" ]]; then
-      if [[ $(ls -lh /lib64/*.so | grep libdm | wc -l) -le 6 ]]; then
-        ln -s $env_dm_home/bin/*.so /lib64
+      if [[ $(find /lib64/* -maxdepth 1 -name "libdm*.so" | wc -l) -le 6 ]]; then
+        ln -s "$env_dm_home"/bin/*.so /lib64
       fi
     fi
   else
@@ -977,7 +988,7 @@ EOF
   fi
 
   ## 配置 glogin
-  cat <<-\EOF >$env_dm_home/bin/disql_conf/glogin.sql
+  cat <<-\EOF >"$env_dm_home"/bin/disql_conf/glogin.sql
 -- 显示密钥过期时间
 column expired_date new_value _edate
 select to_char(expired_date,'yyyy-mm-dd') expired_date from v$license;
@@ -1011,14 +1022,14 @@ function init_db() {
   su - dmdba <<-DMINIT
   cat <<-EOF>$data_dir/$dsc_db_name/dminit.ini
 db_name = $dsc_db_name
-system_path = +$(upper ${asm_disk_arr[$lastIndex]})/data
-system = +$(upper ${asm_disk_arr[$lastIndex]})/data/$dsc_db_name/system.dbf
+system_path = +$(upper "${asm_disk_arr[$lastIndex]}")/data
+system = +$(upper "${asm_disk_arr[$lastIndex]}")/data/$dsc_db_name/system.dbf
 system_size = 128
-roll = +$(upper ${asm_disk_arr[$lastIndex]})/data/$dsc_db_name/roll.dbf
+roll = +$(upper "${asm_disk_arr[$lastIndex]}")/data/$dsc_db_name/roll.dbf
 roll_size = 128
-main = +$(upper ${asm_disk_arr[$lastIndex]})/data/$dsc_db_name/main.dbf
+main = +$(upper "${asm_disk_arr[$lastIndex]}")/data/$dsc_db_name/main.dbf
 main_size = 128
-ctl_path = +$(upper ${asm_disk_arr[$lastIndex]})/data/$dsc_db_name/dm.ctl
+ctl_path = +$(upper "${asm_disk_arr[$lastIndex]}")/data/$dsc_db_name/dm.ctl
 ctl_size = 8
 log_size = $log_size
 dcr_path = /dev/asmdisk/${asm_disk_arr[0]}01
@@ -1038,26 +1049,26 @@ DMINIT
       su - dmdba <<-DMINIT
   cat <<-EOF>>$data_dir/$dsc_db_name/dminit.ini
 
-[$(upper ${dsc_ep_name})$x]
+[$(upper "${dsc_ep_name}")$x]
 config_path = $data_dir/$dsc_db_name/$dsc_ep_name${x}_config
 port_num = $port_num
 mal_host = ${wc_pubip_array[$x]}
 mal_port = 9340
-log_path = +$(upper ${asm_disk_arr[$lastIndex]})/log/$dsc_ep_name${x}_log01.log
-log_path = +$(upper ${asm_disk_arr[$lastIndex]})/log/$dsc_ep_name${x}_log02.log
+log_path = +$(upper "${asm_disk_arr[$lastIndex]}")/log/$dsc_ep_name${x}_log01.log
+log_path = +$(upper "${asm_disk_arr[$lastIndex]}")/log/$dsc_ep_name${x}_log02.log
 EOF
 DMINIT
     else
       su - dmdba <<-DMINIT
   cat <<-EOF>>$data_dir/$dsc_db_name/dminit.ini
 
-[$(upper ${dsc_ep_name})$x]
+[$(upper "${dsc_ep_name}")$x]
 config_path = $data_dir/$dsc_db_name/$dsc_ep_name${x}_config
 port_num = $port_num
 mal_host = ${wc_pubip_array[$x]}
 mal_port = 9340
-log_path = +$(upper ${asm_disk_arr[2]})/log/$dsc_ep_name${x}_log01.log
-log_path = +$(upper ${asm_disk_arr[2]})/log/$dsc_ep_name${x}_log02.log
+log_path = +$(upper "${asm_disk_arr[2]}")/log/$dsc_ep_name${x}_log01.log
+log_path = +$(upper "${asm_disk_arr[2]}")/log/$dsc_ep_name${x}_log02.log
 EOF
 DMINIT
     fi
@@ -1093,8 +1104,8 @@ function init_dmdb() {
 function dm_sqllog() {
   if [[ $dm_install_mode = "dsc" ]]; then
     for ((x = 0; x < ${#wc_pubip_array[@]}; x++)); do
-      mkdir -p $data_dir/$dsc_db_name/$dsc_ep_name${x}_config/sqllog
-      chown -R dmdba.dinstall $data_dir/$dsc_db_name/$dsc_ep_name${x}_config/sqllog
+      mkdir -p "$data_dir"/"$dsc_db_name"/"$dsc_ep_name"${x}_config/sqllog
+      chown -R dmdba.dinstall "$data_dir"/"$dsc_db_name"/"$dsc_ep_name"${x}_config/sqllog
       su - dmdba <<-DMSQLLOG
   cat <<-EOF > $data_dir/$dsc_db_name/$dsc_ep_name${x}_config/sqllog.ini
 [SLOG_ALL]
@@ -1107,8 +1118,8 @@ EOF
 DMSQLLOG
     done
   else
-    mkdir -p $data_dir/$db_name/sqllog
-    chown -R dmdba.dinstall $data_dir/$db_name/sqllog
+    mkdir -p "$data_dir"/"$db_name"/sqllog
+    chown -R dmdba.dinstall "$data_dir"/"$db_name"/sqllog
     su - dmdba <<-DMSQLLOG
   cat <<-EOF >$data_dir/$db_name/sqllog.ini
 [SLOG_ALL]
@@ -1127,10 +1138,10 @@ DMSQLLOG
 function install_dmdb_svc() {
   log_print "注册实例服务" ""
   if [[ ! -e /usr/lib/systemd/system/DmService${db_name}.service ]]; then
-    $env_dm_home/script/root/dm_service_installer.sh -t dmserver -dm_ini $data_dir/$db_name/dm.ini -p $db_name
+    "$env_dm_home"/script/root/dm_service_installer.sh -t dmserver -dm_ini "$data_dir"/"$db_name"/dm.ini -p "$db_name"
     if [[ $os_version = "6" ]]; then
-      ln -sf /etc/rc.d/init.d/DmService$db_name $env_dm_home/bin/DmService$db_name
-      chmod 755 $env_dm_home/bin/DmService$db_name
+      ln -sf /etc/rc.d/init.d/DmService"$db_name" "$env_dm_home"/bin/DmService"$db_name"
+      chmod 755 "$env_dm_home"/bin/DmService"$db_name"
     fi
   fi
 }
@@ -1194,13 +1205,13 @@ function si_dmarch() {
     ## 仅创建实例时，判断归档路径是否存在，没有则创建
     if [[ $only_init_db = "Y" ]]; then
       if [[ ! -d $arch_dir ]]; then
-        mkdir $arch_dir
-        chown -R dmdba:dinstall $arch_dir
+        mkdir "$arch_dir"
+        chown -R dmdba:dinstall "$arch_dir"
       fi
     fi
     ## 创建实例归档日志路径
-    [[ ! -d $arch_dir/$db_name ]] && mkdir -p $arch_dir/$db_name
-    chown -R dmdba:dinstall $arch_dir/$db_name
+    [[ ! -d $arch_dir/$db_name ]] && mkdir -p "$arch_dir"/"$db_name"
+    chown -R dmdba:dinstall "$arch_dir"/"$db_name"
     cat <<-EOF >/home/dmdba/scripts/conf_arch.sql
 set echo off
 set timing off
@@ -1227,7 +1238,7 @@ function dsc_dmarch() {
   if [[ $arch_disk = "" ]]; then
     space_limit_value=$space_limit
   else
-    space_limit_value=$(echo "$(($space_limit - 10240))/${#wc_pubip_array[@]}/${#wc_pubip_array[@]}" | bc)
+    space_limit_value=$(echo "$((space_limit - 10240))/${#wc_pubip_array[@]}/${#wc_pubip_array[@]}" | bc)
   fi
 
   lastIndex=$((${#asm_disk_arr[@]} - 1))
@@ -1240,14 +1251,14 @@ DMARCH
   if [[ $arch_disk = "" ]]; then
     su - dmdba <<-DMARCH
 	cat <<-EOF>>/home/dmdba/scripts/conf_arch.sql		
-ALTER DATABASE ADD ARCHIVELOG 'DEST = +$(upper ${asm_disk_arr[$lastIndex]})/log/${dsc_ep_name}$(($node_num - 1))/arch, TYPE = local, FILE_SIZE = 1024, SPACE_LIMIT = $space_limit_value'; 
+ALTER DATABASE ADD ARCHIVELOG 'DEST = +$(upper "${asm_disk_arr[$lastIndex]}")/log/${dsc_ep_name}$((node_num - 1))/arch, TYPE = local, FILE_SIZE = 1024, SPACE_LIMIT = $space_limit_value'; 
 EOF
 DMARCH
     for ((x = 1; x <= ${#wc_pubip_array[@]}; x++)); do
-      if [[ $x != $node_num ]]; then
+      if [[ $x != "$node_num" ]]; then
         su - dmdba <<-DMARCH
 	  cat <<-EOF>>/home/dmdba/scripts/conf_arch.sql		
-ALTER DATABASE ADD ARCHIVELOG 'DEST = $(upper ${dsc_ep_name})$((x - 1)), TYPE = REMOTE, FILE_SIZE = 1024, SPACE_LIMIT = $space_limit_value, INCOMING_PATH = +$(upper ${asm_disk_arr[$lastIndex]})/log/${dsc_ep_name}$((x - 1))/arch'; 
+ALTER DATABASE ADD ARCHIVELOG 'DEST = $(upper "${dsc_ep_name}")$((x - 1)), TYPE = REMOTE, FILE_SIZE = 1024, SPACE_LIMIT = $space_limit_value, INCOMING_PATH = +$(upper "${asm_disk_arr[$lastIndex]}")/log/${dsc_ep_name}$((x - 1))/arch'; 
 EOF
 DMARCH
       fi
@@ -1255,14 +1266,14 @@ DMARCH
   else
     su - dmdba <<-DMARCH
 	cat <<-EOF>>/home/dmdba/scripts/conf_arch.sql		
-ALTER DATABASE ADD ARCHIVELOG 'DEST = +$(upper ${asm_disk_arr[$((lastIndex - 1))]})/log/${dsc_ep_name}$(($node_num - 1))/arch, TYPE = local, FILE_SIZE = 1024, SPACE_LIMIT = $space_limit_value'; 
+ALTER DATABASE ADD ARCHIVELOG 'DEST = +$(upper "${asm_disk_arr[$((lastIndex - 1))]}")/log/${dsc_ep_name}$((node_num - 1))/arch, TYPE = local, FILE_SIZE = 1024, SPACE_LIMIT = $space_limit_value'; 
 EOF
 DMARCH
     for ((x = 1; x <= ${#wc_pubip_array[@]}; x++)); do
-      if [[ $x != $node_num ]]; then
+      if [[ $x != "$node_num" ]]; then
         su - dmdba <<-DMARCH
 	  cat <<-EOF>>/home/dmdba/scripts/conf_arch.sql		
-ALTER DATABASE ADD ARCHIVELOG 'DEST = $(upper ${dsc_ep_name})$((x - 1)), TYPE = REMOTE, FILE_SIZE = 1024, SPACE_LIMIT = $space_limit_value, INCOMING_PATH = +$(upper ${asm_disk_arr[$((lastIndex - 1))]})/log/${dsc_ep_name}$((x - 1))/arch'; 
+ALTER DATABASE ADD ARCHIVELOG 'DEST = $(upper "${dsc_ep_name}")$((x - 1)), TYPE = REMOTE, FILE_SIZE = 1024, SPACE_LIMIT = $space_limit_value, INCOMING_PATH = +$(upper "${asm_disk_arr[$((lastIndex - 1))]}")/log/${dsc_ep_name}$((x - 1))/arch'; 
 EOF
 DMARCH
       fi
@@ -1282,13 +1293,13 @@ function dm_bak() {
   # 仅创建实例时，判断备份路径是否存在，没有则创建
   if [[ $only_init_db = "Y" ]]; then
     if [[ ! -d $backup_dir ]]; then
-      mkdir $backup_dir
-      chown -R dmdba:dinstall $backup_dir
+      mkdir "$backup_dir"
+      chown -R dmdba:dinstall "$backup_dir"
     fi
   fi
   ## 创建实例备份路径
-  [[ ! -d $backup_dir/$1 ]] && mkdir -p $backup_dir/$1
-  chown -R dmdba:dinstall $backup_dir/$1
+  [[ ! -d $backup_dir/$1 ]] && mkdir -p "$backup_dir"/"$1"
+  chown -R dmdba:dinstall "$backup_dir"/"$1"
   cat <<-EOF >/home/dmdba/scripts/conf_fullbackup.sql
 set echo off
 set timing off
@@ -1363,9 +1374,9 @@ function conf_arch_bak_user() {
   echo
   ##创建备份脚本
   if [[ $dm_install_mode = "dsc" ]]; then
-    dm_bak $dsc_db_name
+    dm_bak "$dsc_db_name"
   else
-    dm_bak $db_name
+    dm_bak "$db_name"
   fi
 
   ## 创建 DMDBA 用户
@@ -1909,8 +1920,8 @@ exit
 DMCSSM
     while true; do
       sleep 5s
-      PID=$(ps -ef | grep $data_dir/$dsc_db_name/dm.ini | grep -v grep | grep -v $$ | awk '{print $2}')
-      [ ! $PID ] && break
+      PID=$(pgrep -f "$data_dir"/"$dsc_db_name"/"$dsc_ep_name"0_config/dm.ini)
+      [ ! "$PID" ] && break
     done
     color_printf red "启动数据库"
     echo
@@ -1920,10 +1931,10 @@ exit
 DMCSSM
     while true; do
       sleep 5s
-      PID=$(ps -ef | grep $data_dir/$dsc_db_name/dm.ini | grep -v grep | grep -v $$ | awk '{print $2}')
-      if [ -n $PID ]; then
-        connResult=$(su - dmdba -c "disql -S -L SYSDBA/SYSDBA:$port_num -c \"set heading off\" -e 'select 1'" | awk END{print})
-        if [ $connResult = 1 ]; then
+      PID=$(pgrep -f "$data_dir"/"$dsc_db_name"/"$dsc_ep_name"0_config/dm.ini)
+      if [ -n "$PID" ]; then
+        connResult=$(su - dmdba -c "disql -S -L SYSDBA/SYSDBA:$port_num -c \"set heading off\" -e 'select 1'" | awk 'END {print}')
+        if [ "$connResult" = 1 ]; then
           break
         fi
       fi
@@ -1948,7 +1959,7 @@ function other_node_shell() {
     color_printf blue "节点 ${wc_pubip_array[$i]} 开始执行配置："
     echo
     ## https://www.cnblogs.com/youngerger/p/9104144.html
-    ssh -t ${wc_pubip_array[$i]} "cd $software_dir && sh $software_dir/dwnode.sh"
+    ssh -t "${wc_pubip_array[$i]}" "cd $software_dir && sh $software_dir/dwnode.sh"
     echo
     color_printf blue "节点 ${wc_pubip_array[$i]} 配置完成！"
   done
@@ -1960,7 +1971,7 @@ function other_node_shell() {
     echo
     color_printf blue "监视器主机开始执行配置："
     echo
-    ssh -t $dw_monitor_ip "cd $software_dir && sh $software_dir/dwmonitor_node.sh"
+    ssh -t "$dw_monitor_ip" "cd $software_dir && sh $software_dir/dwmonitor_node.sh"
     echo
     color_printf blue "监视器主机配置完成！"
   fi
@@ -1981,7 +1992,7 @@ function dw_pri_backup() {
   echo
   color_printf green "主库查看脱机备份文件："
   echo
-  ls -la $backup_dir/BACKUP_FILE_01
+  ls -la "$backup_dir"/BACKUP_FILE_01
 }
 
 #==============================================================#
@@ -1996,8 +2007,8 @@ function dw_std_restore() {
   color_printf green "拷贝主库的备份文件并授权："
   echo
   ## 获取节点一的备份文件
-  scp -r ${wc_pubip_array[0]}:$backup_dir/BACKUP_FILE_01 $backup_dir
-  chown -R dmdba:dinstall $backup_dir
+  scp -r "${wc_pubip_array[0]}":"$backup_dir"/BACKUP_FILE_01 "$backup_dir"
+  chown -R dmdba:dinstall "$backup_dir"
   echo
   color_printf green "备库执行脱机数据库 dmrman 还原："
   echo
@@ -2040,16 +2051,16 @@ EOF
 DMMON
     done
 
-    cat $env_dm_home/dmmonitor_$dw_group_name.ini
+    cat "$env_dm_home"/dmmonitor_"$dw_group_name".ini
 
     ## 注册 dmmonitor 服务
     echo
     color_printf green "监视主机注册监视器服务："
     echo
-    $env_dm_home/script/root/dm_service_installer.sh -t dmmonitor -monitor_ini $env_dm_home/dmmonitor_$dw_group_name.ini -p $dw_group_name
+    "$env_dm_home"/script/root/dm_service_installer.sh -t dmmonitor -monitor_ini "$env_dm_home"/dmmonitor_"$dw_group_name".ini -p "$dw_group_name"
     if [[ $os_version = "6" ]]; then
-      ln -sf /etc/rc.d/init.d/DmMonitorService$dw_group_name $env_dm_home/bin/DmMonitorService$dw_group_name
-      chmod 755 $env_dm_home/bin/DmMonitorService$dw_group_name
+      ln -sf /etc/rc.d/init.d/DmMonitorService"$dw_group_name" "$env_dm_home"/bin/DmMonitorService"$dw_group_name"
+      chmod 755 "$env_dm_home"/bin/DmMonitorService"$dw_group_name"
     fi
 
     ## 启动监视进程
@@ -2072,10 +2083,10 @@ DMMON
   sed -i 's/ARCH_INI                        = 0/ARCH_INI                        = 1/g' $data_dir/$db_name/dm.ini
 DM
 
-    cat $data_dir/$db_name/dm.ini | grep "ALTER_MODE_STATUS" &&
-      cat $data_dir/$db_name/dm.ini | grep "ENABLE_OFFLINE_TS" &&
-      cat $data_dir/$db_name/dm.ini | grep "MAL_INI" &&
-      cat $data_dir/$db_name/dm.ini | grep "ARCH_INI"
+    grep <"$data_dir"/"$db_name"/dm.ini "ALTER_MODE_STATUS" &&
+      grep <"$data_dir"/"$db_name"/dm.ini "ENABLE_OFFLINE_TS" &&
+      grep <"$data_dir"/"$db_name"/dm.ini "MAL_INI" &&
+      grep <"$data_dir"/"$db_name"/dm.ini "ARCH_INI"
 
     ## 主备库配置 dmmal.ini 参数
     echo
@@ -2097,8 +2108,8 @@ DMMAL
       su - dmdba <<-DMMAL
   cat <<-EOF >>$data_dir/$db_name/dmmal.ini
 
-[MAL_INST$(($i + 1))]
-MAL_INST_NAME = $dw_instance_name$(($i + 1))
+[MAL_INST$((i + 1))]
+MAL_INST_NAME = $dw_instance_name$((i + 1))
 MAL_HOST = ${wc_malip_array[$i]}
 MAL_PORT = $mal_port_num
 MAL_INST_HOST = ${wc_pubip_array[i]}
@@ -2109,7 +2120,7 @@ EOF
 DMMAL
     done
 
-    cat $data_dir/$db_name/dmmal.ini
+    cat "$data_dir"/"$db_name"/dmmal.ini
 
     ## 主备库配置 dmarch.ini 参数
     echo
@@ -2134,7 +2145,7 @@ DMARCH
     ## 数组循环输出
     a=0
     for ((i = 1; i <= ${#wc_pubip_array[@]}; i++)); do
-      if [[ $i != $node_num ]]; then
+      if [[ $i != "$node_num" ]]; then
         a=$((a + 1))
         su - dmdba <<-DMARCH
 cat<<-EOF>>/dmdata/DAMENG/dmarch.ini
@@ -2147,7 +2158,7 @@ DMARCH
       fi
     done
 
-    cat $data_dir/$db_name/dmarch.ini
+    cat "$data_dir"/"$db_name"/dmarch.ini
 
     ## 主备库配置 dmwatcher.ini 参数
     echo
@@ -2171,7 +2182,7 @@ INST_STARTUP_CMD = $env_dm_home/bin/DmService$db_name start
 EOF
 DMWATCH
 
-    cat $data_dir/$db_name/dmwatcher.ini
+    cat "$data_dir"/"$db_name"/dmwatcher.ini
 
     ## 主备库配置监视器 dmmonitor.ini 参数
     echo
@@ -2203,7 +2214,7 @@ EOF
 DMMON
     done
 
-    cat $data_dir/$db_name/dmmonitor_$dw_group_name.ini
+    cat "$data_dir"/"$db_name"/dmmonitor_"$dw_group_name".ini
 
     ## 注册 dmwatcher 服务
     echo
@@ -2213,10 +2224,10 @@ DMMON
       color_printf green "备库注册 dmwatcher 服务："
     fi
     echo
-    $env_dm_home/script/root/dm_service_installer.sh -t dmwatcher -watcher_ini $data_dir/$db_name/dmwatcher.ini -p $dw_group_name
+    "$env_dm_home"/script/root/dm_service_installer.sh -t dmwatcher -watcher_ini "$data_dir"/"$db_name"/dmwatcher.ini -p "$dw_group_name"
     if [[ $os_version = "6" ]]; then
-      ln -sf /etc/rc.d/init.d/DmWatcherService$dw_group_name $env_dm_home/bin/DmWatcherService$dw_group_name
-      chmod 755 $env_dm_home/bin/DmWatcherService$dw_group_name
+      ln -sf /etc/rc.d/init.d/DmWatcherService"$dw_group_name" "$env_dm_home"/bin/DmWatcherService"$dw_group_name"
+      chmod 755 "$env_dm_home"/bin/DmWatcherService"$dw_group_name"
     fi
     ## 主备库启动到 mount 状态
     echo
@@ -2284,12 +2295,12 @@ EOF
 function get_uuid() {
 
   if [[ $os_version = "6" ]]; then
-    /sbin/scsi_id -g -u $1
+    /sbin/scsi_id -g -u "$1"
   else
-    if [[ $(udevadm info --query=all --name=$1 | grep -i ID_PART_ENTRY_UUID | wc -l) > 0 ]]; then
-      udevadm info --query=all --name=$1 | grep -i ID_PART_ENTRY_UUID | awk -F'=' '{print $2}'
+    if [[ $(udevadm info --query=all --name="$1" | grep -c -i ID_PART_ENTRY_UUID) -gt 0 ]]; then
+      udevadm info --query=all --name="$1" | grep -i ID_PART_ENTRY_UUID | awk -F'=' '{print $2}'
     else
-      /usr/lib/udev/scsi_id -g -u $1
+      /usr/lib/udev/scsi_id -g -u "$1"
     fi
   fi
 
@@ -2299,7 +2310,7 @@ function get_uuid() {
 #==============================================================#
 function get_dm_uuid() {
 
-  udevadm info --query=all --name=/dev/mapper/$1 | grep -i dm_uuid | awk -F'=' '{print $2}'
+  udevadm info --query=all --name=/dev/mapper/"$1" | grep -i dm_uuid | awk -F'=' '{print $2}'
 
 }
 #==============================================================#
@@ -2317,8 +2328,8 @@ function check_disk() {
     done
   fi
 
-  if [[ $disk_list_arr[0] =~ "dev" ]]; then
-    if [[ $(get_uuid ${disk_list_arr[0]}) = "" ]]; then
+  if [[ ${disk_list_arr[0]} =~ "dev" ]]; then
+    if [[ $(get_uuid "${disk_list_arr[0]}") = "" ]]; then
       echo
       color_printf red "请检查参数 [-dcd, --dcr_disk] 的值 ${disk_list_arr[0]} 是否正确！"
       exit 99
@@ -2327,23 +2338,23 @@ function check_disk() {
         for ((x = 0; x < $((${#disk_list_arr[@]} - 1)); x++)); do
           for ((y = $((x + 1)); y < ${#disk_list_arr[@]}; y++)); do
             if [[ $fil_disk = "" ]]; then
-              if [[ $(get_uuid ${disk_list_arr[$y]}) = "" ]]; then
+              if [[ $(get_uuid "${disk_list_arr[$y]}") = "" ]]; then
                 echo
                 color_printf red "请检查参数 [$2, $3] 的值 ${disk_list_arr[$y]} 是否正确！"
                 exit 99
               else
-                if [[ $(get_uuid ${disk_list_arr[$x]}) = $(get_uuid ${disk_list_arr[$y]}) ]]; then
+                if [[ $(get_uuid "${disk_list_arr[$x]}") = $(get_uuid "${disk_list_arr[$y]}") ]]; then
                   echo
                   color_printf red "请检查参数 [$2, $3] 的值 ${disk_list_arr[$x]} 与 ${disk_list_arr[$y]} 是否有相等UUID磁盘，如果有只需要传入一个磁盘即可！"
                   exit 99
                 fi
               fi
             else
-              if [[ $(get_uuid ${disk_list_arr[$x]}) = "" ]]; then
+              if [[ $(get_uuid "${disk_list_arr[$x]}") = "" ]]; then
                 color_printf red "请检查参数 [-fd, --fil_disk] 的值 ${disk_list_arr[$x]} 是否正确！"
                 exit 99
               else
-                if [[ $(get_uuid ${disk_list_arr[$x]}) = $(get_uuid ${disk_list_arr[$y]}) ]]; then
+                if [[ $(get_uuid "${disk_list_arr[$x]}") = $(get_uuid "${disk_list_arr[$y]}") ]]; then
                   disk_list_tmp+=("${disk_list_arr[$x]}")
                   break
                 fi
@@ -2354,7 +2365,7 @@ function check_disk() {
       fi
     fi
   else
-    if [[ $(get_dm_uuid ${disk_list_arr[0]}) = "" ]]; then
+    if [[ $(get_dm_uuid "${disk_list_arr[0]}") = "" ]]; then
       echo
       color_printf red "请检查参数 [-dcd, --dcr_disk] 的值 ${disk_list_arr[0]} 是否正确！"
       exit 99
@@ -2362,12 +2373,12 @@ function check_disk() {
       if [[ ${#disk_list_arr[@]} -gt 1 ]]; then
         for ((x = 0; x < $((${#disk_list_arr[@]} - 1)); x++)); do
           for ((y = $((x + 1)); y < ${#disk_list_arr[@]}; y++)); do
-            if [[ $(get_dm_uuid ${disk_list_arr[$y]}) = "" ]]; then
+            if [[ $(get_dm_uuid "${disk_list_arr[$y]}") = "" ]]; then
               echo
               color_printf red "请检查参数 [$2, $3] 的值 ${disk_list_arr[$y]} 是否正确！"
               exit 99
             else
-              if [[ $(get_dm_uuid ${disk_list_arr[$x]}) = $(get_dm_uuid ${disk_list_arr[$y]}) ]]; then
+              if [[ $(get_dm_uuid "${disk_list_arr[$x]}") = $(get_dm_uuid "${disk_list_arr[$y]}") ]]; then
                 echo
                 color_printf red "请检查参数 [$2, $3] 的值 ${disk_list_arr[$x]} 与 ${disk_list_arr[$y]} 是否有相等DM_UUID磁盘，如果有只需要传入一个磁盘即可！"
                 exit 99
@@ -2381,10 +2392,10 @@ function check_disk() {
 
   #清空磁盘
   if [[ -e /home/dmdba/.bash_profile && $(grep -E -c "# DMBegin" /home/dmdba/.bash_profile) = 1 ]]; then
-    for i in ${disk_list_tmp[@]}; do
+    for i in "${disk_list_tmp[@]}"; do
       while true; do
         sleep 5s
-        dd if=/dev/zero of=$i bs=100M count=10 >/dev/null 2>&1
+        dd if=/dev/zero of="$i" bs=100M count=10 >/dev/null 2>&1
         if [ $? -eq 0 ]; then
           break
         fi
@@ -2393,12 +2404,12 @@ function check_disk() {
   fi
 
   if [[ $fil_disk ]]; then
-    for i in ${disk_list_tmp[@]}; do
-      echo "$(get_uuid $i) $i $(disk_storage $i)" >>$software_dir/disk_storage_tmp
+    for i in "${disk_list_tmp[@]}"; do
+      echo "$(get_uuid "$i") $i $(disk_storage "$i")" >>"$software_dir"/disk_storage_tmp
     done
 
-    cat $software_dir/disk_storage_tmp | sort -t ' ' -k3n -k2
-    rm -f $software_dir/disk_storage_tmp
+    sort <"$software_dir"/disk_storage_tmp -t ' ' -k3n -k2
+    rm -f "$software_dir"/disk_storage_tmp
   fi
 
 }
@@ -2415,26 +2426,26 @@ function dsc_conf_asmdisk() {
       cat <<EOF >>/etc/multipath.conf
 
    multipath {
-      wwid   "$(get_uuid $1)"
+      wwid   "$(get_uuid "$1")"
       alias  $2
    }
 EOF
-      echo "KERNEL==\"dm-*\", ENV{DM_UUID}==\"mpath-$(get_uuid $1)\", SYMLINK+=\"asmdisk/$2\", OWNER=\"dmdba\", GROUP=\"dinstall\", MODE=\"0660\"" >>/etc/udev/rules.d/12-dm-permissions.rules
+      echo "KERNEL==\"dm-*\", ENV{DM_UUID}==\"mpath-$(get_uuid "$1")\", SYMLINK+=\"asmdisk/$2\", OWNER=\"dmdba\", GROUP=\"dinstall\", MODE=\"0660\"" >>/etc/udev/rules.d/12-dm-permissions.rules
     else
-      if [[ $(ls -lh /dev/ | grep dmdba | wc -l) -eq 0 || $(ls -lh /dev/ | grep dinstall | wc -l) -eq 0 ]]; then
-        echo "KERNEL==\"dm-*\", ENV{DM_UUID}==\"$(get_dm_uuid $1)\", SYMLINK+=\"asmdisk/$2\", OWNER=\"dmdba\", GROUP=\"dinstall\", MODE=\"0660\"" >>/etc/udev/rules.d/12-dm-permissions.rules
+      if [[ $(find /dev/ -maxdepth 1 -user "dmdba" | wc -l) -eq 0 || $(find /dev/ -maxdepth 1 -group "dinstall" | wc -l) -eq 0 ]]; then
+        echo "KERNEL==\"dm-*\", ENV{DM_UUID}==\"$(get_dm_uuid "$1")\", SYMLINK+=\"asmdisk/$2\", OWNER=\"dmdba\", GROUP=\"dinstall\", MODE=\"0660\"" >>/etc/udev/rules.d/12-dm-permissions.rules
       elif [[ ! -d /dev/asmdisk || $(find /dev/asmdisk -mindepth 1 -name 'dm*' | wc -l) -eq 0 ]]; then
-        echo "KERNEL==\"dm-*\", ENV{DM_UUID}==\"$(get_dm_uuid $1)\", SYMLINK+=\"asmdisk/$2\", OWNER=\"dmdba\", GROUP=\"dinstall\", MODE=\"0660\"" >>/etc/udev/rules.d/12-dm-permissions.rules
+        echo "KERNEL==\"dm-*\", ENV{DM_UUID}==\"$(get_dm_uuid "$1")\", SYMLINK+=\"asmdisk/$2\", OWNER=\"dmdba\", GROUP=\"dinstall\", MODE=\"0660\"" >>/etc/udev/rules.d/12-dm-permissions.rules
       fi
     fi
   else
     if [[ $os_version = "6" ]]; then
-      echo "KERNEL==\"sd*\", BUS==\"scsi\", PROGRAM==\"/sbin/scsi_id --whitelisted --replace-whitespace --device=/dev/\$name\", RESULT==\"$(get_uuid $1)\", SYMLINK+=\"asmdisk/$2\", OWNER=\"dmdba\", GROUP=\"dinstall\", MODE=\"0660\"" >>/etc/udev/rules.d/99-dm-asmdevices.rules
+      echo "KERNEL==\"sd*\", BUS==\"scsi\", PROGRAM==\"/sbin/scsi_id --whitelisted --replace-whitespace --device=/dev/\$name\", RESULT==\"$(get_uuid "$1")\", SYMLINK+=\"asmdisk/$2\", OWNER=\"dmdba\", GROUP=\"dinstall\", MODE=\"0660\"" >>/etc/udev/rules.d/99-dm-asmdevices.rules
     else
-      if [[ $(udevadm info --query=all --name=$1 | grep -i ID_PART_ENTRY_UUID | wc -l) > 0 ]]; then
-        echo "KERNEL==\"sd*\", ENV{ID_PART_ENTRY_UUID}==\"$(get_uuid $1)\", SYMLINK+=\"asmdisk/$2\", OWNER=\"dmdba\", GROUP=\"dinstall\", MODE=\"0660\"" >>/etc/udev/rules.d/99-dm-asmdevices.rules
+      if [[ $(udevadm info --query=all --name="$1" | grep -c -i ID_PART_ENTRY_UUID) -gt 0 ]]; then
+        echo "KERNEL==\"sd*\", ENV{ID_PART_ENTRY_UUID}==\"$(get_uuid "$1")\", SYMLINK+=\"asmdisk/$2\", OWNER=\"dmdba\", GROUP=\"dinstall\", MODE=\"0660\"" >>/etc/udev/rules.d/99-dm-asmdevices.rules
       else
-        echo "KERNEL==\"sd*\", SUBSYSTEM==\"block\", PROGRAM==\"/usr/lib/udev/scsi_id --whitelisted --replace-whitespace --device=/dev/\$name\", RESULT==\"$(get_uuid $1)\", SYMLINK+=\"asmdisk/$2\", OWNER=\"dmdba\", GROUP=\"dinstall\", MODE=\"0660\"" >>/etc/udev/rules.d/99-dm-asmdevices.rules
+        echo "KERNEL==\"sd*\", SUBSYSTEM==\"block\", PROGRAM==\"/usr/lib/udev/scsi_id --whitelisted --replace-whitespace --device=/dev/\$name\", RESULT==\"$(get_uuid "$1")\", SYMLINK+=\"asmdisk/$2\", OWNER=\"dmdba\", GROUP=\"dinstall\", MODE=\"0660\"" >>/etc/udev/rules.d/99-dm-asmdevices.rules
       fi
     fi
   fi
@@ -2463,7 +2474,7 @@ function dsc_conf_udev() {
       /sbin/udevadm trigger --type=devices --action=change
     fi
     sleep 5s
-    if [ $(find /dev/asmdisk -mindepth 1 -name 'dm*' | wc -l) -gt 0 ]; then
+    if [[ $(find /dev/asmdisk -mindepth 1 -name 'dm*' | wc -l) -gt 0 ]]; then
       log_print "查看udev磁盘" "ls -lh /dev/asmdisk"
       ls -lh /dev/asmdisk
       break
@@ -2480,11 +2491,11 @@ function dsc_conf_disk_arr() {
     log_print "拷贝UDEV规则文件" ""
   fi
 
-  if [[ $disk_arr[0] =~ "dev" ]]; then
+  if [[ ${disk_arr[0]} =~ "dev" ]]; then
     if [[ $multipath = "Y" ]]; then
-      [ -e /etc/udev/rules.d/12-dm-permissions.rules ] && nohup \cp -rv /etc/udev/rules.d/12-dm-permissions.rules{,.$current} >/dev/null 2>&1 && rm -f /etc/udev/rules.d/12-dm-permissions.rules
+      [ -e /etc/udev/rules.d/12-dm-permissions.rules ] && nohup command cp -rv /etc/udev/rules.d/12-dm-permissions.rules{,."$current"} >/dev/null 2>&1 && rm -f /etc/udev/rules.d/12-dm-permissions.rules
     else
-      [ -e /etc/udev/rules.d/99-dm-asmdevices.rules ] && nohup \cp -rv /etc/udev/rules.d/99-dm-asmdevices.rules{,.$current} >/dev/null 2>&1 && rm -f /etc/udev/rules.d/99-dm-asmdevices.rules
+      [ -e /etc/udev/rules.d/99-dm-asmdevices.rules ] && nohup command cp -rv /etc/udev/rules.d/99-dm-asmdevices.rules{,."$current"} >/dev/null 2>&1 && rm -f /etc/udev/rules.d/99-dm-asmdevices.rules
     fi
   fi
 
@@ -2494,12 +2505,12 @@ function dsc_conf_disk_arr() {
   for ((x = 0; x < ${#disk_arr[@]}; x++)); do
     for i in ${disk_arr[$x]//,/ }; do
       if [[ $log_disk = "" ]]; then
-        unset asm_disk_arr_tmp[2]
+        unset "${asm_disk_arr_tmp[2]}"
       fi
       if [[ $arch_disk = "" ]]; then
-        unset asm_disk_arr_tmp[3]
+        unset "${asm_disk_arr_tmp[3]}"
       fi
-      asm_disk_arr=(${asm_disk_arr_tmp[@]})
+      asm_disk_arr=("${asm_disk_arr_tmp[@]}")
     done
   done
 
@@ -2507,7 +2518,7 @@ function dsc_conf_disk_arr() {
     if [[ $multipath = "Y" ]]; then
       yum install -q -y device-mapper-multipath --skip-broken
       mpathconf --enable --with_multipathd y
-      nohup \cp -rv /etc/multipath.conf{,.$current} >/dev/null 2>&1
+      nohup command cp -rv /etc/multipath.conf{,."$current"} >/dev/null 2>&1
       if [[ $node_num = 1 ]]; then
         ##请勿调整/etc/multipath.conf文件格式
         cat <<EOF >/etc/multipath.conf
@@ -2535,10 +2546,10 @@ EOF
     for ((x = 0; x < ${#disk_arr[@]}; x++)); do
       y=1
       for i in ${disk_arr[$x]//,/ }; do
-        if (($y < 10)); then
-          dsc_conf_asmdisk $(lower $i) ${asm_disk_arr[$x]}0$y
+        if ((y < 10)); then
+          dsc_conf_asmdisk "$(lower "$i")" "${asm_disk_arr[$x]}"0$y
         else
-          dsc_conf_asmdisk $(lower $i) ${asm_disk_arr[$x]}$y
+          dsc_conf_asmdisk "$(lower "$i")" "${asm_disk_arr[$x]}"$y
         fi
         y=$((y + 1))
       done
@@ -2572,17 +2583,17 @@ EOF
 
     if [[ $multipath = "Y" ]]; then
       if [[ ${disk_arr[0]} =~ "dev" ]]; then
-        scp ${wc_pubip_array[0]}:/etc/multipath.conf /etc/multipath.conf >/dev/null 2>&1
+        scp "${wc_pubip_array[0]}":/etc/multipath.conf /etc/multipath.conf >/dev/null 2>&1
         cat /etc/multipath.conf
       fi
-      if [[ $(ls -lh /dev/ | grep dmdba | wc -l) -eq 0 || $(ls -lh /dev/ | grep dinstall | wc -l) -eq 0 ]]; then
-        scp ${wc_pubip_array[0]}:/etc/udev/rules.d/12-dm-permissions.rules /etc/udev/rules.d/12-dm-permissions.rules >/dev/null 2>&1
+      if [[ $(find /dev/ -maxdepth 1 -user "dmdba" | wc -l | wc -l) -eq 0 || $(find /dev/ -maxdepth 1 -group "dinstall" | wc -l) -eq 0 ]]; then
+        scp "${wc_pubip_array[0]}":/etc/udev/rules.d/12-dm-permissions.rules /etc/udev/rules.d/12-dm-permissions.rules >/dev/null 2>&1
       elif [[ ! -d /dev/asmdisk || $(find /dev/asmdisk -mindepth 1 -name 'dm*' | wc -l) -eq 0 ]]; then
-        scp ${wc_pubip_array[0]}:/etc/udev/rules.d/12-dm-permissions.rules /etc/udev/rules.d/12-dm-permissions.rules >/dev/null 2>&1
+        scp "${wc_pubip_array[0]}":/etc/udev/rules.d/12-dm-permissions.rules /etc/udev/rules.d/12-dm-permissions.rules >/dev/null 2>&1
       fi
       cat /etc/udev/rules.d/12-dm-permissions.rules
     else
-      scp ${wc_pubip_array[0]}:/etc/udev/rules.d/99-dm-asmdevices.rules /etc/udev/rules.d/99-dm-asmdevices.rules >/dev/null 2>&1
+      scp "${wc_pubip_array[0]}":/etc/udev/rules.d/99-dm-asmdevices.rules /etc/udev/rules.d/99-dm-asmdevices.rules >/dev/null 2>&1
       cat /etc/udev/rules.d/99-dm-asmdevices.rules
     fi
 
@@ -2668,7 +2679,7 @@ DMCFG
       su - dmdba <<-DMCFG
           cat<<-EOF>>$data_dir/$dsc_db_name/dmdcr_cfg.ini
 [GRP_$dsc_db_name]
- DCR_EP_NAME = $(upper ${dsc_ep_name})$x
+ DCR_EP_NAME = $(upper "${dsc_ep_name}")$x
  DCR_EP_SEQNO = $x
  DCR_EP_PORT = $port_num
  DCR_CHECK_PORT = $db_dcr_ep_port
@@ -2678,8 +2689,8 @@ DMCFG
 
   else
 
-    scp ${wc_pubip_array[0]}:$data_dir/$dsc_db_name/dmdcr_cfg.ini $data_dir/$dsc_db_name/dmdcr_cfg.ini >/dev/null 2>&1
-    chown -R dmdba.dinstall $data_dir/$dsc_db_name/dmdcr_cfg.ini
+    scp "${wc_pubip_array[0]}":"$data_dir"/"$dsc_db_name"/dmdcr_cfg.ini "$data_dir"/"$dsc_db_name"/dmdcr_cfg.ini >/dev/null 2>&1
+    chown -R dmdba.dinstall "$data_dir"/"$dsc_db_name"/dmdcr_cfg.ini
 
   fi
 }
@@ -2694,7 +2705,7 @@ function dsc_dmasvmal() {
     for ((x = 0; x < ${#wc_malip_array[@]}; x++)); do
       su - dmdba <<-DMDSM
 	cat<<-EOF>>$data_dir/$dsc_db_name/dmasvrmal.ini
-[MAL_INST$(($x + 1))] 
+[MAL_INST$((x + 1))] 
   MAL_INST_NAME              = ASM$x
   MAL_HOST                   = ${wc_malip_array[$x]}
   MAL_PORT                   = $asvrmal_mal_port
@@ -2705,8 +2716,8 @@ DMDSM
 
   else
 
-    scp ${wc_pubip_array[0]}:$data_dir/$dsc_db_name/dmasvrmal.ini $data_dir/$dsc_db_name/dmasvrmal.ini >/dev/null 2>&1
-    chown -R dmdba.dinstall $data_dir/$dsc_db_name/dmasvrmal.ini
+    scp "${wc_pubip_array[0]}":"$data_dir"/"$dsc_db_name"/dmasvrmal.ini "$data_dir"/"$dsc_db_name"/dmasvrmal.ini >/dev/null 2>&1
+    chown -R dmdba.dinstall "$data_dir"/"$dsc_db_name"/dmasvrmal.ini
 
   fi
 }
@@ -2722,11 +2733,11 @@ function dsc_dmdcr() {
     cat <<-EOF>$data_dir/$dsc_db_name/dmdcr.ini
 DMDCR_PATH                 = /dev/asmdisk/${asm_disk_arr[0]}01
 DMDCR_MAL_PATH             = $data_dir/$dsc_db_name/dmasvrmal.ini
-DMDCR_SEQNO                = $(($node_num - 1)) 
+DMDCR_SEQNO                = $((node_num - 1)) 
 DMDCR_ASM_RESTART_INTERVAL = 0
 DMDCR_ASM_STARTUP_CMD      = $env_dm_home/bin/dmasmsvr dcr_ini=$data_dir/$dsc_db_name/dmdcr.ini
 DMDCR_DB_RESTART_INTERVAL  = 0
-DMDCR_DB_STARTUP_CMD       = $env_dm_home/bin/dmserver path=$data_dir/$dsc_db_name/$dsc_ep_name$(($node_num - 1))_config/dm.ini dcr_ini=$data_dir/$dsc_db_name/dmdcr.ini
+DMDCR_DB_STARTUP_CMD       = $env_dm_home/bin/dmserver path=$data_dir/$dsc_db_name/$dsc_ep_name$((node_num - 1))_config/dm.ini dcr_ini=$data_dir/$dsc_db_name/dmdcr.ini
 EOF
 DMDCR
 
@@ -2758,8 +2769,8 @@ CSSM_LOG_FILE_SIZE = 32
 CSSM_LOG_SPACE_LIMIT = 0 
 EOF
 DMCSSM
-  chown dmdba.dinstall $data_dir/$dsc_db_name/dmcssm.ini
-  ls -lh $data_dir/$dsc_db_name
+  chown dmdba.dinstall "$data_dir"/"$dsc_db_name"/dmcssm.ini
+  ls -lh "$data_dir"/"$dsc_db_name"
 
 }
 #==============================================================#
@@ -2767,14 +2778,15 @@ DMCSSM
 #==============================================================#
 function dsc_dmsvc() {
 
-  $(>$software_dir/temp)
+  [[ -e "$software_dir"/temp ]] && echo "" >"$software_dir"/temp
+
   for ((x = 0; x < ${#wc_pubip_array[@]}; x++)); do
-    echo -n ${wc_pubip_array[$x]}:$port_num, >>$software_dir/temp
+    echo -n "${wc_pubip_array[$x]}":"$port_num", >>"$software_dir"/temp
   done
   su - dmdba <<DMSVC
   cat <<-EOF>>/etc/dm_svc.conf
 
-$dsc_db_name=($(cat $software_dir/temp | sed 's/,$//g')) 
+$dsc_db_name=($(sed <"$software_dir"/temp 's/,$//g')) 
 [$dsc_db_name]
 SWITCH_TIMES=(60) 
 SWITCH_INTERVAL=(1000) 
@@ -2782,7 +2794,7 @@ EP_SELECTOR=(1)
 AUTO_RECONNECT=(1)
 EOF
 DMSVC
-  rm -rf $software_dir/temp
+  rm -rf "$software_dir"/temp
 
 }
 
@@ -2793,7 +2805,7 @@ DMSVC
 function dsc_dmasmcmd() {
 
   log_print "初始化asm磁盘" ""
-  [ -e $data_dir/$dsc_db_name/asmdisk.txt ] && rm -f $data_dir/$dsc_db_name/asmdisk.txt
+  [ -e "$data_dir"/"$dsc_db_name"/asmdisk.txt ] && rm -f "$data_dir"/"$dsc_db_name"/asmdisk.txt
 
   su - dmdba <<-DMASMCMD
 	cat <<-EOF>$data_dir/$dsc_db_name/asmdisk.txt
@@ -2806,7 +2818,7 @@ DMASMCMD
   for ((x = 2; x < ${#disk_arr[@]}; x++)); do
     y=1
     for i in ${disk_arr[$x]//,/ }; do
-      if (($y < 10)); then
+      if ((y < 10)); then
         su - dmdba <<-DMASMCMD
         	cat <<-EOF>>$data_dir/$dsc_db_name/asmdisk.txt
 create asmdisk '/dev/asmdisk/${asm_disk_arr[$x]}0$y' '${asm_disk_arr[$x]}0$y' 
@@ -2841,14 +2853,14 @@ DMASMCMD
 function dsc_dmservice() {
 
   log_print "注册css和asm服务"
-  $env_dm_home/script/root/dm_service_installer.sh -t dmcss -dcr_ini $data_dir/$dsc_db_name/dmdcr.ini -p Css
-  $env_dm_home/script/root/dm_service_installer.sh -t dmasmsvr -dcr_ini $data_dir/$dsc_db_name/dmdcr.ini -p Asmsvr -y DmCSSServiceCss
+  "$env_dm_home"/script/root/dm_service_installer.sh -t dmcss -dcr_ini "$data_dir"/"$dsc_db_name"/dmdcr.ini -p Css
+  "$env_dm_home"/script/root/dm_service_installer.sh -t dmasmsvr -dcr_ini "$data_dir"/"$dsc_db_name"/dmdcr.ini -p Asmsvr -y DmCSSServiceCss
 
   if [[ $os_version = "6" ]]; then
-    ln -sf /etc/rc.d/init.d/DmCSSServiceCss $env_dm_home/bin/DmCSSServiceCss
-    chmod 755 $env_dm_home/bin/DmCSSServiceCss
-    ln -sf /etc/rc.d/init.d/DmASMSvrServiceAsmsvr $env_dm_home/bin/DmASMSvrServiceAsmsvr
-    chmod 755 $env_dm_home/bin/DmASMSvrServiceAsmsvr
+    ln -sf /etc/rc.d/init.d/DmCSSServiceCss "$env_dm_home"/bin/DmCSSServiceCss
+    chmod 755 "$env_dm_home"/bin/DmCSSServiceCss
+    ln -sf /etc/rc.d/init.d/DmASMSvrServiceAsmsvr "$env_dm_home"/bin/DmASMSvrServiceAsmsvr
+    chmod 755 "$env_dm_home"/bin/DmASMSvrServiceAsmsvr
   fi
 
 }
@@ -2862,7 +2874,7 @@ function dsc_start_ca() {
   for ((x = 0; x < ${#wc_pubip_array[@]}; x++)); do
     while true; do
       sleep 5s
-      ssh ${wc_pubip_array[$x]} "su - dmdba -c \"$env_dm_home/bin/DmCSSServiceCss start\""
+      ssh "${wc_pubip_array[$x]}" "su - dmdba -c \"$env_dm_home/bin/DmCSSServiceCss start\""
       if [ $? -eq 0 ]; then
         echo
         color_printf blue "节点 ${wc_pubip_array[$x]} 启动成功"
@@ -2876,7 +2888,7 @@ function dsc_start_ca() {
   for ((x = 0; x < ${#wc_pubip_array[@]}; x++)); do
     while true; do
       sleep 5s
-      ssh ${wc_pubip_array[$x]} "su - dmdba -c \"$env_dm_home/bin/DmASMSvrServiceAsmsvr start\""
+      ssh "${wc_pubip_array[$x]}" "su - dmdba -c \"$env_dm_home/bin/DmASMSvrServiceAsmsvr start\""
       if [ $? -eq 0 ]; then
         echo
         color_printf blue "节点 ${wc_pubip_array[$x]} 启动成功"
@@ -2900,7 +2912,7 @@ function dsc_dmasmtool() {
         while true; do
           sleep 5s
           su - dmdba -c "$env_dm_home/bin/dmasmtool DCR_INI=$data_dir/$dsc_db_name/dmdcr.ini" <<-DMASMTOOL
-create diskgroup '$(upper ${asm_disk_arr[$x]})' asmdisk '/dev/asmdisk/${asm_disk_arr[$x]}0$y'
+create diskgroup '$(upper "${asm_disk_arr[$x]}")' asmdisk '/dev/asmdisk/${asm_disk_arr[$x]}0$y'
 exit
 DMASMTOOL
           if [ $? -eq 0 ]; then
@@ -2908,12 +2920,12 @@ DMASMTOOL
           fi
         done
       elif
-        (($y > 1 && $y < 10))
+        ((y > 1 && y < 10))
       then
         while true; do
           sleep 5s
           su - dmdba -c "$env_dm_home/bin/dmasmtool DCR_INI=$data_dir/$dsc_db_name/dmdcr.ini" <<-DMASMTOOL
-alter diskgroup '$(upper ${asm_disk_arr[$x]})' add asmdisk '/dev/asmdisk/${asm_disk_arr[$x]}0$y'
+alter diskgroup '$(upper "${asm_disk_arr[$x]}")' add asmdisk '/dev/asmdisk/${asm_disk_arr[$x]}0$y'
 exit
 DMASMTOOL
           if [ $? -eq 0 ]; then
@@ -2924,7 +2936,7 @@ DMASMTOOL
         while true; do
           sleep 5s
           su - dmdba -c "$env_dm_home/bin/dmasmtool DCR_INI=$data_dir/$dsc_db_name/dmdcr.ini" <<-DMASMTOOL
-alter diskgroup '$(upper ${asm_disk_arr[$x]})' add asmdisk '/dev/asmdisk/${asm_disk_arr[$x]}$y'
+alter diskgroup '$(upper "${asm_disk_arr[$x]}")' add asmdisk '/dev/asmdisk/${asm_disk_arr[$x]}$y'
 exit
 DMASMTOOL
           if [ $? -eq 0 ]; then
@@ -2945,12 +2957,12 @@ DMASMTOOL
 function dsc_start() {
 
   log_print "注册服务并启动数据库" ""
-  $env_dm_home/script/root/dm_service_installer.sh -t dmserver -dm_ini $data_dir/$dsc_db_name/$dsc_ep_name$(($node_num - 1))_config/dm.ini -dcr_ini $data_dir/$dsc_db_name/dmdcr.ini -p $dsc_db_name -y DmASMSvrServiceAsmsvr
+  "$env_dm_home"/script/root/dm_service_installer.sh -t dmserver -dm_ini "$data_dir"/"$dsc_db_name"/"$dsc_ep_name"$((node_num - 1))_config/dm.ini -dcr_ini "$data_dir"/"$dsc_db_name"/dmdcr.ini -p "$dsc_db_name" -y DmASMSvrServiceAsmsvr
   echo
 
   if [[ $os_version = "6" ]]; then
-    ln -sf /etc/rc.d/init.d/DmService$dsc_db_name $env_dm_home/bin/DmService$dsc_db_name
-    chmod 755 $env_dm_home/bin/DmService$dsc_db_name
+    ln -sf /etc/rc.d/init.d/DmService"$dsc_db_name" "$env_dm_home"/bin/DmService"$dsc_db_name"
+    chmod 755 "$env_dm_home"/bin/DmService"$dsc_db_name"
   fi
 
   ##启动当前节点数据库实例
@@ -2965,12 +2977,12 @@ function dsc_start() {
   done
 
   #修改数据css自动拉起参数
-  sed -i '4s/0/180/g' $data_dir/$dsc_db_name/dmdcr.ini
-  sed -i '6s/0/360/g' $data_dir/$dsc_db_name/dmdcr.ini
+  sed -i '4s/0/180/g' "$data_dir"/"$dsc_db_name"/dmdcr.ini
+  sed -i '6s/0/360/g' "$data_dir"/"$dsc_db_name"/dmdcr.ini
 
-  cat <<EOF >$software_dir/starttmp.sh
+  cat <<EOF >"$software_dir"/starttmp.sh
 #!/bin/bash
-$env_dm_home/script/root/dm_service_installer.sh -t dmserver -dm_ini $data_dir/$dsc_db_name/$dsc_ep_name$(($node_num - 1))_config/dm.ini -dcr_ini $data_dir/$dsc_db_name/dmdcr.ini -p $dsc_db_name -y DmASMSvrServiceAsmsvr
+$env_dm_home/script/root/dm_service_installer.sh -t dmserver -dm_ini $data_dir/$dsc_db_name/$dsc_ep_name$((node_num - 1))_config/dm.ini -dcr_ini $data_dir/$dsc_db_name/dmdcr.ini -p $dsc_db_name -y DmASMSvrServiceAsmsvr
 echo
 if [[ $os_version = "6" ]]; then
   ln -sf /etc/rc.d/init.d/DmService$dsc_db_name $env_dm_home/bin/DmService$dsc_db_name
@@ -2988,25 +3000,25 @@ EOF
 
   lastIndex=$((${#wc_pubip_array[@]} - 1))
   for ((x = 1; x < ${#wc_pubip_array[@]}; x++)); do
-    scp -r $data_dir/$dsc_db_name/$dsc_ep_name${x}_config ${wc_pubip_array[$x]}:$data_dir/$dsc_db_name/ >/dev/null 2>&1
-    ssh ${wc_pubip_array[$x]} "chown -R dmdba.dinstall $data_dir/$dsc_db_name/$dsc_ep_name${x}_config"
-    scp -r $software_dir/starttmp.sh ${wc_pubip_array[$x]}:$software_dir/starttmp.sh >/dev/null 2>&1
-    ssh ${wc_pubip_array[$x]} "sed -i '2s/'$(($node_num - 1))'/'$x'/g' $software_dir/starttmp.sh"
-    ssh ${wc_pubip_array[$x]} "sh $software_dir/starttmp.sh"
+    scp -r "$data_dir"/"$dsc_db_name"/"$dsc_ep_name"${x}_config "${wc_pubip_array[$x]}":"$data_dir"/"$dsc_db_name"/ >/dev/null 2>&1
+    ssh "${wc_pubip_array[$x]}" "chown -R dmdba.dinstall $data_dir/$dsc_db_name/$dsc_ep_name${x}_config"
+    scp -r "$software_dir"/starttmp.sh "${wc_pubip_array[$x]}":"$software_dir"/starttmp.sh >/dev/null 2>&1
+    ssh "${wc_pubip_array[$x]}" "sed -i '2s/'$((node_num - 1))'/'$x'/g' $software_dir/starttmp.sh"
+    ssh "${wc_pubip_array[$x]}" "sh $software_dir/starttmp.sh"
     color_printf blue "节点 ${wc_pubip_array[$x]} 启动成功"
     echo
 
     ## 修改数据库自动拉起参数
-    ssh ${wc_pubip_array[$x]} "sed -i '4s/0/180/g' $data_dir/$dsc_db_name/dmdcr.ini"
-    ssh ${wc_pubip_array[$x]} "sed -i '6s/0/360/g' $data_dir/$dsc_db_name/dmdcr.ini"
+    ssh "${wc_pubip_array[$x]}" "sed -i '4s/0/180/g' $data_dir/$dsc_db_name/dmdcr.ini"
+    ssh "${wc_pubip_array[$x]}" "sed -i '6s/0/360/g' $data_dir/$dsc_db_name/dmdcr.ini"
 
-    if ((${x} == ${lastIndex})); then
+    if ((x == lastIndex)); then
       log_print "创建数据库归档" ""
       while true; do
         sleep 5s
-        PID=$(ps -ef | grep $data_dir/$dsc_db_name/dm.ini | grep -v grep | grep -v $$ | awk '{print $2}')
-        if [ -n $PID ]; then
-          connResult=$(su - dmdba -c "disql -S -L SYSDBA/SYSDBA:$port_num -c \"set heading off\" -e 'select 1'" | awk END{print})
+        PID=$(pgrep -f "$data_dir"/"$dsc_db_name"/"$dsc_ep_name"0_config/dm.ini)
+        if [ -n "$PID" ]; then
+          connResult=$(su - dmdba -c "disql -S -L SYSDBA/SYSDBA:$port_num -c \"set heading off\" -e 'select 1'" | awk 'END {print}')
           if [[ $connResult = 1 ]]; then
             break
           fi
@@ -3016,8 +3028,8 @@ EOF
         echo
         color_printf blue "在节点 ${wc_pubip_array[$y]} 创建归档"
         echo
-        ssh ${wc_pubip_array[$y]} "su - dmdba -c \"disql -S SYSDBA/SYSDBA:$port_num '\\\`/home/dmdba/scripts/conf_arch.sql'\""
-        ssh ${wc_pubip_array[$y]} "sed -i '4i ARCH_LOCAL_SHARE = 1\n' $data_dir/$dsc_db_name/$dsc_ep_name${y}_config/dmarch.ini"
+        ssh "${wc_pubip_array[$y]}" "su - dmdba -c \"disql -S SYSDBA/SYSDBA:$port_num '\\\`/home/dmdba/scripts/conf_arch.sql'\""
+        ssh "${wc_pubip_array[$y]}" "sed -i '4i ARCH_LOCAL_SHARE = 1\n' $data_dir/$dsc_db_name/$dsc_ep_name${y}_config/dmarch.ini"
       done
       optimize_dmdb
     fi
@@ -3061,22 +3073,22 @@ function install_wc_oguid() {
 function mode_wc_para() {
 
   if [[ $wc_hostname ]]; then
-    echo -n " -dhn $wc_hostname" >>$software_dir/dwnode.sh
+    echo -n " -dhn $wc_hostname" >>"$software_dir"/dwnode.sh
   fi
   if [[ $dm_iso_name ]]; then
-    echo -n " -di $dm_iso_name" >>$software_dir/dwnode.sh
+    echo -n " -di $dm_iso_name" >>"$software_dir"/dwnode.sh
   fi
   if [[ $timeserver_ip ]]; then
-    echo -n " -ti $timeserver_ip" >>$software_dir/dwnode.sh
+    echo -n " -ti $timeserver_ip" >>"$software_dir"/dwnode.sh
   fi
   if [[ $key_path ]]; then
-    echo -n " -kp $key_path" >>$software_dir/dwnode.sh
+    echo -n " -kp $key_path" >>"$software_dir"/dwnode.sh
   fi
   if [[ $log_disk ]]; then
-    echo -n " -lod $log_disk" >>$software_dir/dwnode.sh
+    echo -n " -lod $log_disk" >>"$software_dir"/dwnode.sh
   fi
   if [[ $arch_disk ]]; then
-    echo -n " -ard $arch_disk" >>$software_dir/dwnode.sh
+    echo -n " -ard $arch_disk" >>"$software_dir"/dwnode.sh
   fi
 
 }
@@ -3087,14 +3099,14 @@ function send_other_node() {
     echo
     color_printf green "拷贝脚本以及安装包到节点：${wc_pubip_array[$i]}"
     echo
-    ssh ${wc_pubip_array[$i]} "[[ -f $software_dir || -d $software_dir ]] && rm -rf $software_dir ; mkdir -p $software_dir"
-    scp $software_dir/dwnode.sh ${wc_pubip_array[$i]}:$software_dir
-    ssh ${wc_pubip_array[$i]} "echo -n \" -node $(($i + 1))\" >>$software_dir/dwnode.sh"
-    scp $software_dir/DMShellInstall ${wc_pubip_array[$i]}:$software_dir
+    ssh "${wc_pubip_array[$i]}" "[[ -f $software_dir || -d $software_dir ]] && rm -rf $software_dir ; mkdir -p $software_dir"
+    scp "$software_dir"/dwnode.sh "${wc_pubip_array[$i]}":"$software_dir"
+    ssh "${wc_pubip_array[$i]}" "echo -n \" -node $((i + 1))\" >>$software_dir/dwnode.sh"
+    scp "$software_dir"/DMShellInstall "${wc_pubip_array[$i]}":"$software_dir"
     if [[ $dm_iso_name ]]; then
-      scp $software_dir/$dm_iso_name ${wc_pubip_array[$i]}:$software_dir
+      scp "$software_dir"/"$dm_iso_name" "${wc_pubip_array[$i]}":"$software_dir"
     else
-      scp $software_dir/DMInstall.bin $dw_monitor_ip:$software_dir
+      scp "$software_dir"/DMInstall.bin "$dw_monitor_ip":"$software_dir"
     fi
   done
   echo
@@ -3109,7 +3121,7 @@ function install_dw() {
   instance_name=$dw_instance_name$node_num
 
   if [[ $node_num -gt -1 ]]; then
-    hostname=${wc_hostname_array[$(($node_num - 1))]}
+    hostname=${wc_hostname_array[$((node_num - 1))]}
   fi
 
   if [[ $node_num = 1 ]]; then
@@ -3117,46 +3129,46 @@ function install_dw() {
     ## 默认两节点
     if [[ $dw_monitor_ip ]]; then
       ## 如果单独配置监视器，则需要配置互信
-      if [[ $(ssh_check root $wc_public_ip,$dw_monitor_ip) = "false" ]]; then
-        ssh_trust root $root_passwd $wc_public_ip,$dw_monitor_ip
+      if [[ $(ssh_check root "$wc_public_ip","$dw_monitor_ip") = "false" ]]; then
+        ssh_trust root "$root_passwd" "$wc_public_ip","$dw_monitor_ip"
       fi
     else
-      if [[ $(ssh_check root $wc_public_ip) = "false" ]]; then
-        ssh_trust root $root_passwd $wc_public_ip
+      if [[ $(ssh_check root "$wc_public_ip") = "false" ]]; then
+        ssh_trust root "$root_passwd" "$wc_public_ip"
       fi
     fi
 
     ## 创建其余节点的安装脚本，并分发到其他节点
-    echo -n "sh $software_dir/DMShellInstall -dp $dm_passwd -d $env_dm_home -dd $data_dir -ad $arch_dir -bd $backup_dir -es $extent_size -ps $page_size -cs $case_sensitive -c $charset -lic $length_in_char -ls $log_size -sl $space_limit -pn $port_num -sp '$sysdba_pwd' -bm $backup_mode -m $only_conf_os -ud $install_until_db -oid $only_init_db -opd $optimize_db -oopd $only_optimize_db -mp $mem_percent -sm $sort_mode -dpi $wc_public_ip -dmi $wc_mal_ip -rp $root_passwd -dgn $dw_group_name -mpn $mal_port_num -mdpn $mal_dw_port_num -midpn $mal_inst_dw_port_num -oguid $oguid -dim $dm_install_mode -oi $os_iso" >$software_dir/dwnode.sh
+    echo -n "sh $software_dir/DMShellInstall -dp $dm_passwd -d $env_dm_home -dd $data_dir -ad $arch_dir -bd $backup_dir -es $extent_size -ps $page_size -cs $case_sensitive -c $charset -lic $length_in_char -ls $log_size -sl $space_limit -pn $port_num -sp '$sysdba_pwd' -bm $backup_mode -m $only_conf_os -ud $install_until_db -oid $only_init_db -opd $optimize_db -oopd $only_optimize_db -mp $mem_percent -sm $sort_mode -dpi $wc_public_ip -dmi $wc_mal_ip -rp $root_passwd -dgn $dw_group_name -mpn $mal_port_num -mdpn $mal_dw_port_num -midpn $mal_inst_dw_port_num -oguid $oguid -dim $dm_install_mode -oi $os_iso" >"$software_dir"/dwnode.sh
     #修改公共参数
     mode_wc_para
 
     ## 分发到监视器节点
     if [[ $dw_monitor_ip ]]; then
       ## 监视器IP传输到备库节点
-      echo -n " -dmoi $dw_monitor_ip" >>$software_dir/dwnode.sh
+      echo -n " -dmoi $dw_monitor_ip" >>"$software_dir"/dwnode.sh
       ## 监视器只需要安装达梦软件即可
-      echo -n "sh $software_dir/DMShellInstall -dp $dm_passwd -d $env_dm_home -dd $data_dir -ad $arch_dir -bd $backup_dir -ud Y -dpi $wc_public_ip -dmi $wc_mal_ip -rp $root_passwd -dgn $dw_group_name -mdpn $mal_dw_port_num -oguid $oguid -dim $dm_install_mode -oi $os_iso" >$software_dir/dwmonitor_node.sh
+      echo -n "sh $software_dir/DMShellInstall -dp $dm_passwd -d $env_dm_home -dd $data_dir -ad $arch_dir -bd $backup_dir -ud Y -dpi $wc_public_ip -dmi $wc_mal_ip -rp $root_passwd -dgn $dw_group_name -mdpn $mal_dw_port_num -oguid $oguid -dim $dm_install_mode -oi $os_iso" >"$software_dir"/dwmonitor_node.sh
       if [[ $dm_iso_name ]]; then
-        echo -n " -di $dm_iso_name" >>$software_dir/dwmonitor_node.sh
+        echo -n " -di $dm_iso_name" >>"$software_dir"/dwmonitor_node.sh
       fi
       if [[ $timeserver_ip ]]; then
-        echo -n " -ti $timeserver_ip" >>$software_dir/dwmonitor_node.sh
+        echo -n " -ti $timeserver_ip" >>"$software_dir"/dwmonitor_node.sh
       fi
       if [[ $key_path ]]; then
-        echo -n " -kp $key_path" >>$software_dir/dwmonitor_node.sh
+        echo -n " -kp $key_path" >>"$software_dir"/dwmonitor_node.sh
       fi
       echo
       color_printf green "拷贝脚本以及安装包到监视器节点 $dw_monitor_ip"
       echo
-      ssh $dw_monitor_ip "[[ -f $software_dir || -d $software_dir ]] && rm -rf $software_dir ; mkdir -p $software_dir"
-      scp $software_dir/dwmonitor_node.sh $dw_monitor_ip:$software_dir
-      ssh $dw_monitor_ip "echo -n ' -node -1' >>$software_dir/dwmonitor_node.sh"
-      scp $software_dir/DMShellInstall $dw_monitor_ip:$software_dir
+      ssh "$dw_monitor_ip" "[[ -f $software_dir || -d $software_dir ]] && rm -rf $software_dir ; mkdir -p $software_dir"
+      scp "$software_dir"/dwmonitor_node.sh "$dw_monitor_ip":"$software_dir"
+      ssh "$dw_monitor_ip" "echo -n ' -node -1' >>$software_dir/dwmonitor_node.sh"
+      scp "$software_dir"/DMShellInstall "$dw_monitor_ip":"$software_dir"
       if [[ $dm_iso_name ]]; then
-        scp $software_dir/$dm_iso_name $dw_monitor_ip:$software_dir
+        scp "$software_dir"/"$dm_iso_name" "$dw_monitor_ip":"$software_dir"
       else
-        scp $software_dir/DMInstall.bin $dw_monitor_ip:$software_dir
+        scp "$software_dir"/DMInstall.bin "$dw_monitor_ip":"$software_dir"
       fi
       echo
     fi
@@ -3168,12 +3180,12 @@ function install_dw() {
 ##安装dsc
 function install_dsc() {
 
-  hostname=${wc_hostname_array[$(($node_num - 1))]}
+  hostname=${wc_hostname_array[$((node_num - 1))]}
 
   if [[ $node_num = 1 ]]; then
     install_wc_oguid
-    ssh_trust root $root_passwd $wc_public_ip
-    echo -n "sh $software_dir/DMShellInstall -dp $dm_passwd -d $env_dm_home -dd $data_dir -ad $arch_dir -bd $backup_dir -ddn $dsc_db_name -den $dsc_ep_name -es $extent_size -ps $page_size -cs $case_sensitive -c $charset -lic $length_in_char -ls $log_size -sl $space_limit -pn $port_num -sp '$sysdba_pwd' -apd $asm_pwd -bm $backup_mode -m $only_conf_os -ud $install_until_db -oid $only_init_db -opd $optimize_db -oopd $only_optimize_db -mp $mem_percent -sm $sort_mode -dpi $wc_public_ip -dmi $wc_mal_ip -rp $root_passwd -dcd $dcr_disk -vod $vote_disk -dad $data_disk -cdp $css_dcr_ep_port -adp $asm_dcr_ep_port -ddp $db_dcr_ep_port -amp $asvrmal_mal_port -oguid $oguid -dim $dm_install_mode -mtp $multipath -oi $os_iso" >$software_dir/dwnode.sh
+    ssh_trust root "$root_passwd" "$wc_public_ip"
+    echo -n "sh $software_dir/DMShellInstall -dp $dm_passwd -d $env_dm_home -dd $data_dir -ad $arch_dir -bd $backup_dir -ddn $dsc_db_name -den $dsc_ep_name -es $extent_size -ps $page_size -cs $case_sensitive -c $charset -lic $length_in_char -ls $log_size -sl $space_limit -pn $port_num -sp '$sysdba_pwd' -apd $asm_pwd -bm $backup_mode -m $only_conf_os -ud $install_until_db -oid $only_init_db -opd $optimize_db -oopd $only_optimize_db -mp $mem_percent -sm $sort_mode -dpi $wc_public_ip -dmi $wc_mal_ip -rp $root_passwd -dcd $dcr_disk -vod $vote_disk -dad $data_disk -cdp $css_dcr_ep_port -adp $asm_dcr_ep_port -ddp $db_dcr_ep_port -amp $asvrmal_mal_port -oguid $oguid -dim $dm_install_mode -mtp $multipath -oi $os_iso" >"$software_dir"/dwnode.sh
     #修改公共参数
     mode_wc_para
     ## 分发节点
@@ -3193,7 +3205,7 @@ function main() {
   fi
 
   ## 检查当前目录是否是root根目录以及的/dm目录，否则退出
-  if [[ $software_dir = "/root" || $software_dir = $env_dm_home ]]; then
+  if [[ $software_dir = "/root" || $software_dir = "$env_dm_home" ]]; then
     color_printf red "达梦软件包以及脚本位置不能是/root或者$env_dm_home!"
     exit 99
   fi
@@ -3283,7 +3295,7 @@ function main() {
         done
         ## 判断节点上限数量
         if [[ $dm_install_mode = "datawatch" ]]; then
-          if [[ ${#wc_hostname_array[@]} < 2 || ${#wc_hostname_array[@]} > 9 ]]; then
+          if [[ ${#wc_hostname_array[@]} -lt 2 || ${#wc_hostname_array[@]} -gt 9 ]]; then
             color_printf red "请检查参数 [-dhn, --wc_hostname] $wc_hostname ，至少需要 2 个主机名，最多支持 9 个主机名！"
             exit 99
           fi
@@ -3341,7 +3353,7 @@ function main() {
       ;;
     -in | --instance_name)
       if [[ $2 ]]; then
-        if [[ $dm_install_mode = "dsc" && ! x$2 = x ]]; then
+        if [[ $dm_install_mode = "dsc" && ! $2 = "" ]]; then
           color_printf red "dsc不需要传[-in, --instance_name] 参数"
           exit 99
         else
@@ -3421,7 +3433,7 @@ function main() {
     -ls | --log_size)
       if [[ $2 ]]; then
         log_size=$2
-        if [ $log_size -lt 256 -o $log_size -gt 2048 ]; then
+        if [ "$log_size" -lt 256 ] || [ "$log_size" -gt 2048 ]; then
           color_printf red "请检查参数 [-ls, --log_size] 的值 $2 是否在 [256~2048] 区间内！"
           exit 99
         fi
@@ -3787,12 +3799,11 @@ function main() {
       color_printf red "脚本已退出安装，请检查是否参数是否正确，可以查看脚本帮助：'DMShellInstall --help' 获取更多信息！"
       exit 99
       ;;
-    *) break ;;
     esac
   done
 
   ## 把传进的磁盘加到数组里面
-  disk_arr=($dcr_disk $vote_disk $log_disk $arch_disk $data_disk)
+  disk_arr=("$dcr_disk" "$vote_disk" "$log_disk" "$arch_disk" "$data_disk")
 
   ## 切换用户除去显示 last login 信息
   sed -i 's/^session\+[[:space:]]\+include[[:space:]]\+postlogin/#&/g' /etc/pam.d/su
@@ -3837,7 +3848,7 @@ EOF
           dm_install_mode=dsc
         fi
         if [[ $dm_install_mode = "single" || $dm_install_mode = "datawatch" || $dm_install_mode = "dsc" ]]; then
-          color_printf green "达梦数据库安装部署类型:" $dm_install_mode
+          color_printf green "达梦数据库安装部署类型:" "$dm_install_mode"
           echo
           break
         else
@@ -3847,23 +3858,23 @@ EOF
       done
       ## 校验服务器ip
       if [[ $dm_install_mode = "datawatch" || $dm_install_mode = "dsc" ]]; then
-        check_ip_arr $wc_public_ip -dpi --wc_public_ip
-        check_ip_arr $wc_mal_ip -dmi --wc_mal_ip
+        check_ip_arr "$wc_public_ip" -dpi --wc_public_ip
+        check_ip_arr "$wc_mal_ip" -dmi --wc_mal_ip
         if [[ $dw_monitor_ip ]]; then
-          check_ip $dw_monitor_ip -dmoi --dw_monitor_ip
+          check_ip "$dw_monitor_ip" -dmoi --dw_monitor_ip
         fi
       fi
       ##判断传进去的磁盘是否有重复的uuiid值，有的话脚本直接退出，只在一节点执行
       if [[ $dm_install_mode = "dsc" ]]; then
-        check_disk $dcr_disk -dcd --dcr_disk
-        check_disk $vote_disk -vod --vote_disk
-        if [[ $log_disk ]]; then
-          check_disk $log_disk -lod --log_disk
-        fi
+        check_disk "$dcr_disk" -dcd --dcr_disk
+        check_disk "$vote_disk" -vod --vote_disk
         if [[ $arch_disk ]]; then
-          check_disk $arch_disk -ard --arch_disk
+          check_disk "$arch_disk" -ard --arch_disk
         fi
-        check_disk $data_disk -dad --data_disk
+        if [[ $log_disk ]]; then
+          check_disk "$log_disk" -lod --log_disk
+        fi
+        check_disk "$data_disk" -dad --data_disk
       fi
     fi
   fi
@@ -3876,7 +3887,7 @@ EOF
     fi
     install_dw
   elif [[ $dm_install_mode = "dsc" ]]; then
-    if [[ $multipath = "Y" && $disk_list_arr[0] =~ "dev" ]]; then
+    if [[ $multipath = "Y" && ${disk_list_arr[0]} =~ "dev" ]]; then
       conf_yum
     elif [[ $node_num = 1 && $os_iso = "Y" ]]; then
       conf_yum
@@ -3886,7 +3897,7 @@ EOF
 
   color_printf blue "达梦数据库开始安装："
   ## 主程序入口
-  print_sysinfo | tee $dminstalllog
+  print_sysinfo | tee "$dminstalllog"
   if [[ $only_optimize_db = "N" ]]; then
     if [[ $only_init_db = "N" ]]; then
       conf_swap
@@ -3976,8 +3987,8 @@ EOF
           su - dmdba -c "mv $data_dir/$db_name $data_dir/$db_name$current"
         fi
       else
-        mkdir $data_dir
-        chown -R dmdba:dinstall $backup_dir
+        mkdir "$data_dir"
+        chown -R dmdba:dinstall "$backup_dir"
       fi
       init_dmdb
       install_dmdb_svc
