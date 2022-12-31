@@ -369,21 +369,24 @@ function ssh_trust() {
 
   for ip in ${host_ip//,/ }; do
     ## 远程拷贝 ~/.ssh 文件夹到目标端
-    /usr/bin/expect <<-EOF
+    /usr/bin/expect <<EOF
     spawn scp -rq $ssh_dir $dest_user@$ip:~
-    expect "password:"
-    send "$passwd\r"
+    expect {
+      "yes/no" { send "yes\r";exp_continue }
+      "password" { send "$passwd\n" }
+    }
     expect eof
-    exit
 EOF
     ## ssh-copy-id to remote
-    /usr/bin/expect <<-EOF
+    /usr/bin/expect <<EOF
     spawn ssh-copy-id -i $dest_user@$ip
-    expect "password:"
-    send "$passwd\r"
+    expect {
+      "yes/no" { send "yes\r";exp_continue }
+      "password" { send "$passwd\n" }
+    }
     expect eof
-    exit
 EOF
+
   done
 }
 
