@@ -386,7 +386,6 @@ EOF
     }
     expect eof
 EOF
-
   done
 }
 
