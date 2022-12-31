@@ -372,8 +372,13 @@ function ssh_trust() {
     /usr/bin/expect <<EOF
     spawn scp -rq $ssh_dir $dest_user@$ip:~
     expect {
-      "yes/no" { send "yes\r";exp_continue }
-      "password" { send "$passwd\r" }
+      "yes/no" { 
+        send "yes\r";exp_continue 
+      } "password" { 
+        send "$passwd\r"
+      } eof { 
+        exit
+      }
     }
     expect eof
 EOF
@@ -381,8 +386,13 @@ EOF
     /usr/bin/expect <<EOF
     spawn ssh-copy-id -i $dest_user@$ip
     expect {
-      "yes/no" { send "yes\r";exp_continue }
-      "password" { send "$passwd\r" }
+      "yes/no" { 
+        send "yes\r";exp_continue 
+      } "password" { 
+        send "$passwd\r" 
+      } eof { 
+        exit
+      }
     }
     expect eof
 EOF
