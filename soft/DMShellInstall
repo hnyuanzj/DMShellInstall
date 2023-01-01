@@ -339,6 +339,15 @@ function ssh_check() {
 #                            互信配置                           #
 #==============================================================#
 function ssh_trust() {
+  ## 节点 root 用户互信
+  echo
+  color_printf green "安装 expect 软件用于 root 用户互信："
+  echo
+  yum install -y expect
+  echo
+  color_printf green "所有节点 root 用户配置互信："
+  echo
+
   local dest_user=$1
   local passwd=$2
   local host_ip=$3
@@ -360,16 +369,16 @@ function ssh_trust() {
 
   ## 获取 authorized_keys
   cat "$ssh_dir"/id_rsa.pub >>"$ssh_dir"/authorized_keys && chmod 644 "$ssh_dir"/authorized_keys
-  [[ ! -f $ssh_dir/known_hosts ]] && touch "$ssh_dir"/known_hosts
 
   ## 写入 IP 到 known_host
+  [[ ! -f $ssh_dir/known_hosts ]] && touch "$ssh_dir"/known_hosts && chmod 644 "$ssh_dir"/known_hosts
   for ip in ${host_ip//,/ }; do
-    [[ -z $(ssh-keygen -qF "$ip") ]] && ssh-keyscan -t rsa,dsa,ecdsa "$ip" >>"$ssh_dir"/known_hosts
+    [[ -z $(ssh-keygen -qF "$ip") ]] && ssh-keyscan -t rsa,dsa,ecdsa "$ip" >>"$ssh_dir"/known_hosts >/dev/null 2>&1
   done
 
   for ip in ${host_ip//,/ }; do
     ## 远程拷贝 ~/.ssh 文件夹到目标端
-    /usr/bin/expect <<EOF
+    /usr/bin/expect >/dev/null 2>&1 <<EOF
     spawn scp -rq $ssh_dir $dest_user@$ip:~
     expect {
       "yes/no" { 
@@ -383,19 +392,29 @@ function ssh_trust() {
     expect eof
 EOF
     ## ssh-copy-id to remote
-    /usr/bin/expect <<EOF
+    /usr/bin/expect >/dev/null 2>&1 <<EOF
     spawn ssh-copy-id -i $dest_user@$ip
     expect {
       "yes/no" { 
-        send "yes\r";exp_continue 
+        send "yes\r";exp_continue
       } "password" { 
-        send "$passwd\r" 
+        send "$passwd\r"
       } eof { 
         exit
       }
     }
     expect eof
 EOF
+    ##测试互信是否配置成功
+    var=$(ssh "$ip" "echo 1")
+    if [[ $var -eq 1 ]]; then
+      echo
+      color_printf blue "$dest_user@$ip互信配置成功"
+    else
+      echo
+      color_printf red "$dest_user@$ip互信配置失败"
+      exit 99
+    fi
   done
 }
 
