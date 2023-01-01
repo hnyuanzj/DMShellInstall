@@ -3922,22 +3922,22 @@ EOF
   print_sysinfo | tee "$dminstalllog"
   if [[ $only_optimize_db = "N" ]]; then
     if [[ $only_init_db = "N" ]]; then
-      conf_swap
-      conf_firewall
-      conf_selinux
+      conf_swap | tee -a "$dminstalllog"
+      conf_firewall | tee -a "$dminstalllog"
+      conf_selinux | tee -a "$dminstalllog"
       if [[ $hostname ]]; then
         conf_hostname
       fi
-      conf_ntp
-      conf_grub
-      create_user
+      conf_ntp | tee -a "$dminstalllog"
+      conf_grub | tee -a "$dminstalllog"
+      create_user | tee -a "$dminstalllog"
       create_dir
-      conf_sysctl
-      conf_limits
-      conf_ipc
-      conf_lang
-      drop_cache
-      conf_profile
+      conf_sysctl | tee -a "$dminstalllog"
+      conf_limits | tee -a "$dminstalllog"
+      conf_ipc | tee -a "$dminstalllog"
+      conf_lang | tee -a "$dminstalllog"
+      drop_cache | tee -a "$dminstalllog"
+      conf_profile | tee -a "$dminstalllog"
       if [[ $dm_iso_name ]]; then
         mount_iso
       fi
