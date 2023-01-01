@@ -3090,15 +3090,6 @@ function install_wc_oguid() {
   ## 必须节点1获取然后传到其他节点，否则 oguid 不一致，数据守护唯一标识码，同一守护进程组中的所有数据库、守护进程和监视器，都必须配置相同的 OGUID 值，取值范围为 400000-500000 随机数
   oguid=$(rand 400000 500000)
 
-  ## 节点 root 用户互信
-  echo
-  color_printf green "主库安装 expect 软件用于 root 用户互信："
-  echo
-  yum install -y expect
-  echo
-  color_printf green "所有节点 root 用户配置互信："
-  echo
-
 }
 ##配置公共参数
 function mode_wc_para() {
