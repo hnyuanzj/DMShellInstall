@@ -102,9 +102,9 @@ typeset -l dm_install_mode
 #                    数据守护 && DSC 部署全局变量                #
 #==============================================================#
 ## 主机名，心跳IP，业务IP 数组定义
-declare -a wc_hostname_array
-declare -a wc_pubip_array
-declare -a wc_malip_array
+declare -a wc_hostname_arr
+declare -a wc_pubip_arr
+declare -a wc_malip_arr
 ## 操作系统 ISO 是否需要挂载，默认为 Y
 typeset -u os_iso
 os_iso=Y
@@ -280,13 +280,19 @@ function check_ip_arr() {
   ##校验ip地址是否合法正确
   check_ip "$1" "$2" "$3"
 
+  ## 判断节点上限数量
   if [[ $dm_install_mode = "datawatch" ]]; then
-    ## 判断节点上限数量
-    if [[ ${#os_ip_arr[@]} -lt 2 || ${#os_ip_arr[@]} -gt 9 ]]; then
-      color_printf red "请检查参数 [$2, $3] ，至少需要 2 个 IP 地址，最多支持 9 个 IP 地址！"
+    if [[ ${#wc_pubip_arr[@]} -lt 2 || ${#wc_pubip_arr[@]} -gt 9 ]]; then
+      color_printf red "请检查参数 [$2, $3] $wc_public_ip ，至少需要 2 个节点，最多支持 9 个节点！"
+      exit 99
+    fi
+  elif [[ $dm_install_mode = "dsc" ]]; then
+    if [[ ${#wc_pubip_arr[@]} -lt 2 || ${#wc_pubip_arr[@]} -gt 16 ]]; then
+      color_printf red "请检查参数 [$2, $3] $wc_public_ip ，至少需要 2 个节点，最多支持 16 个节点！"
       exit 99
     fi
   fi
+
 }
 #==============================================================#
 #                 过滤系统盘，保留共享存储盘                     #
@@ -473,7 +479,7 @@ EOF
   color_printf blue "数据守护(DataWatch): "
   echo
   color_printf green "-rp" "--root_passwd" "root 用户密码"
-  color_printf green "-dhn" "--wc_hostname" "主机名，以逗号隔开，例如 -dhn dw01,dw02"
+  color_printf green "-hn" "--hostname" "主机名前缀，例如 -hn dw，每个节点主机名是dw01,dw02..."
   color_printf green "-dpi" "--wc_public_ip" "业务IP，以逗号隔开，例如 -dpi 10.211.55.101,10.211.55.102"
   color_printf green "-dmi" "--wc_mal_ip" "MAL IP，以逗号隔开，例如 -dmi 1.1.1.1,1.1.1.2"
   color_printf green "-dmoi" "--dw_monitor_ip" "监视器主机 IP"
@@ -486,7 +492,7 @@ EOF
   color_printf blue "DSC集群(DMDSC): "
   echo
   color_printf green "-rp" "--root_passwd" "root 用户密码"
-  color_printf green "-dhn" "--wc_hostname" "主机名，以逗号隔开，例如 -dhn dsc01,dsc02"
+  color_printf green "-hn" "--hostname" "主机名前缀，例如 -hn dsc，每个节点主机名是dsc01,dsc02..."
   color_printf green "-dpi" "--wc_public_ip" "业务IP，以逗号隔开，例如 -dpi 10.211.55.101,10.211.55.102"
   color_printf green "-dmi" "--wc_mal_ip" "MAL IP，以逗号隔开，例如 -dmi 1.1.1.1,1.1.1.2"
   color_printf green "-ddn" "--dsc_db_name" "数据库DB_NAME，默认值：DSC"
@@ -638,6 +644,19 @@ function conf_selinux() {
 #==============================================================#
 function conf_hostname() {
   log_print "配置主机名" ""
+  ## 配置dw和dsc主机名
+  if [[ $dm_install_mode = "datawatch" || $dm_install_mode = "dsc" ]]; then
+    for ((i = 1; i <= ${#wc_pubip_arr[@]}; i++)); do
+      ## 将主机名加入数组中
+      if ((i < 10)); then
+        wc_hostname_arr[i - 1]="${hostname}0$i"
+      else
+        wc_hostname_arr[i - 1]="${hostname}$i"
+      fi
+    done
+    ## 配置每个节点主机名
+    hostname=${wc_hostname_arr[$((node_num - 1))]}
+  fi
   if [[ $os_version = "6" ]]; then
     local Hostname
     Hostname=$(grep -E "HOSTNAME=" /etc/sysconfig/network)
@@ -1075,7 +1094,7 @@ LOG_SIZE=$log_size
 EOF
 DMINIT
 
-  for ((x = 0; x < ${#wc_malip_array[@]}; x++)); do
+  for ((x = 0; x < ${#wc_malip_arr[@]}; x++)); do
     if [[ $log_disk = "" ]]; then
       su - dmdba <<-DMINIT
   cat <<-EOF>>$data_dir/$dsc_db_name/dminit.ini
@@ -1083,7 +1102,7 @@ DMINIT
 [$(upper "${dsc_ep_name}")$x]
 config_path = $data_dir/$dsc_db_name/$dsc_ep_name${x}_config
 port_num = $port_num
-mal_host = ${wc_pubip_array[$x]}
+mal_host = ${wc_pubip_arr[$x]}
 mal_port = 9340
 log_path = +$(upper "${asm_disk_arr[$lastIndex]}")/log/$dsc_ep_name${x}_log01.log
 log_path = +$(upper "${asm_disk_arr[$lastIndex]}")/log/$dsc_ep_name${x}_log02.log
@@ -1096,7 +1115,7 @@ DMINIT
 [$(upper "${dsc_ep_name}")$x]
 config_path = $data_dir/$dsc_db_name/$dsc_ep_name${x}_config
 port_num = $port_num
-mal_host = ${wc_pubip_array[$x]}
+mal_host = ${wc_pubip_arr[$x]}
 mal_port = 9340
 log_path = +$(upper "${asm_disk_arr[2]}")/log/$dsc_ep_name${x}_log01.log
 log_path = +$(upper "${asm_disk_arr[2]}")/log/$dsc_ep_name${x}_log02.log
@@ -1134,7 +1153,7 @@ function init_dmdb() {
 #==============================================================#
 function dm_sqllog() {
   if [[ $dm_install_mode = "dsc" ]]; then
-    for ((x = 0; x < ${#wc_pubip_array[@]}; x++)); do
+    for ((x = 0; x < ${#wc_pubip_arr[@]}; x++)); do
       mkdir -p "$data_dir"/"$dsc_db_name"/"$dsc_ep_name"${x}_config/sqllog
       chown -R dmdba.dinstall "$data_dir"/"$dsc_db_name"/"$dsc_ep_name"${x}_config/sqllog
       su - dmdba <<-DMSQLLOG
@@ -1269,7 +1288,7 @@ function dsc_dmarch() {
   if [[ $arch_disk = "" ]]; then
     space_limit_value=$space_limit
   else
-    space_limit_value=$(echo "$((space_limit - 10240))/${#wc_pubip_array[@]}/${#wc_pubip_array[@]}" | bc)
+    space_limit_value=$(echo "$((space_limit - 10240))/${#wc_pubip_arr[@]}/${#wc_pubip_arr[@]}" | bc)
   fi
 
   lastIndex=$((${#asm_disk_arr[@]} - 1))
@@ -1285,7 +1304,7 @@ DMARCH
 ALTER DATABASE ADD ARCHIVELOG 'DEST = +$(upper "${asm_disk_arr[$lastIndex]}")/log/${dsc_ep_name}$((node_num - 1))/arch, TYPE = local, FILE_SIZE = 1024, SPACE_LIMIT = $space_limit_value'; 
 EOF
 DMARCH
-    for ((x = 1; x <= ${#wc_pubip_array[@]}; x++)); do
+    for ((x = 1; x <= ${#wc_pubip_arr[@]}; x++)); do
       if [[ $x != "$node_num" ]]; then
         su - dmdba <<-DMARCH
 	  cat <<-EOF>>/home/dmdba/scripts/conf_arch.sql		
@@ -1300,7 +1319,7 @@ DMARCH
 ALTER DATABASE ADD ARCHIVELOG 'DEST = +$(upper "${asm_disk_arr[$((lastIndex - 1))]}")/log/${dsc_ep_name}$((node_num - 1))/arch, TYPE = local, FILE_SIZE = 1024, SPACE_LIMIT = $space_limit_value'; 
 EOF
 DMARCH
-    for ((x = 1; x <= ${#wc_pubip_array[@]}; x++)); do
+    for ((x = 1; x <= ${#wc_pubip_arr[@]}; x++)); do
       if [[ $x != "$node_num" ]]; then
         su - dmdba <<-DMARCH
 	  cat <<-EOF>>/home/dmdba/scripts/conf_arch.sql		
@@ -1906,8 +1925,8 @@ function optimize_dmdb() {
 
   if [[ $dm_install_mode = "dsc" ]]; then
     if [[ $enable_arch = "Y" ]]; then
-      lastIndex=$((${#wc_pubip_array[@]} - 1))
-      log_print "在 ${wc_pubip_array[$lastIndex]} 创建备份" ""
+      lastIndex=$((${#wc_pubip_arr[@]} - 1))
+      log_print "在 ${wc_pubip_arr[$lastIndex]} 创建备份" ""
       if [[ $backup_mode = "1" ]]; then
         su - dmdba -c "disql -S SYSDBA/SYSDBA:$port_num '\`/home/dmdba/scripts/conf_fullbackup.sql'"
       elif [[ $backup_mode = "2" ]]; then
@@ -1917,7 +1936,7 @@ function optimize_dmdb() {
   elif [[ $dm_install_mode = "datawatch" ]]; then
     if [[ $node_num = 1 ]]; then
       if [[ $enable_arch = "Y" ]]; then
-        log_print "在 ${wc_pubip_array[0]} 创建备份" ""
+        log_print "在 ${wc_pubip_arr[0]} 创建备份" ""
         if [[ $backup_mode = "1" ]]; then
           su - dmdba -c "disql -S SYSDBA/SYSDBA:$port_num '\`/home/dmdba/scripts/conf_fullbackup.sql'"
         elif [[ $backup_mode = "2" ]]; then
@@ -1984,15 +2003,15 @@ DMCSSM
 #                    数据守护和DSC其他节点执行脚本                      #
 #==============================================================#
 function other_node_shell() {
-  for ((i = 1; i < ${#wc_pubip_array[@]}; i++)); do
-    log_print "配置节点：${wc_pubip_array[$i]}" ""
+  for ((i = 1; i < ${#wc_pubip_arr[@]}; i++)); do
+    log_print "配置节点：${wc_pubip_arr[$i]}" ""
     echo
-    color_printf blue "节点 ${wc_pubip_array[$i]} 开始执行配置："
+    color_printf blue "节点 ${wc_pubip_arr[$i]} 开始执行配置："
     echo
     ## https://www.cnblogs.com/youngerger/p/9104144.html
-    ssh -t "${wc_pubip_array[$i]}" "cd $software_dir && sh $software_dir/dwnode.sh"
+    ssh -t "${wc_pubip_arr[$i]}" "cd $software_dir && sh $software_dir/dwnode.sh"
     echo
-    color_printf blue "节点 ${wc_pubip_array[$i]} 配置完成！"
+    color_printf blue "节点 ${wc_pubip_arr[$i]} 配置完成！"
   done
 
   ## 配置监视主机
@@ -2038,7 +2057,7 @@ function dw_std_restore() {
   color_printf green "拷贝主库的备份文件并授权："
   echo
   ## 获取节点一的备份文件
-  scp -r "${wc_pubip_array[0]}":"$backup_dir"/BACKUP_FILE_01 "$backup_dir"
+  scp -r "${wc_pubip_arr[0]}":"$backup_dir"/BACKUP_FILE_01 "$backup_dir"
   chown -R dmdba:dinstall "$backup_dir"
   echo
   color_printf green "备库执行脱机数据库 dmrman 还原："
@@ -2074,10 +2093,10 @@ MON_INST_OGUID = $oguid
 EOF
 DMMON
     ## 数组循环输出
-    for ((i = 0; i < ${#wc_pubip_array[@]}; i++)); do
+    for ((i = 0; i < ${#wc_pubip_arr[@]}; i++)); do
       su - dmdba <<-DMMON
 cat<<-EOF>>$env_dm_home/dmmonitor_$dw_group_name.ini
-MON_DW_IP = ${wc_malip_array[$i]}:$mal_dw_port_num
+MON_DW_IP = ${wc_malip_arr[$i]}:$mal_dw_port_num
 EOF
 DMMON
     done
@@ -2135,15 +2154,15 @@ MAL_CONN_FAIL_INTERVAL = 5
 EOF
 DMMAL
     ## 数组循环输出
-    for ((i = 0; i < ${#wc_pubip_array[@]}; i++)); do
+    for ((i = 0; i < ${#wc_pubip_arr[@]}; i++)); do
       su - dmdba <<-DMMAL
   cat <<-EOF >>$data_dir/$db_name/dmmal.ini
 
 [MAL_INST$((i + 1))]
 MAL_INST_NAME = $dw_instance_name$((i + 1))
-MAL_HOST = ${wc_malip_array[$i]}
+MAL_HOST = ${wc_malip_arr[$i]}
 MAL_PORT = $mal_port_num
-MAL_INST_HOST = ${wc_pubip_array[i]}
+MAL_INST_HOST = ${wc_pubip_arr[i]}
 MAL_INST_PORT = $port_num
 MAL_DW_PORT = $mal_dw_port_num
 MAL_INST_DW_PORT = $mal_inst_dw_port_num
@@ -2175,7 +2194,7 @@ EOF
 DMARCH
     ## 数组循环输出
     a=0
-    for ((i = 1; i <= ${#wc_pubip_array[@]}; i++)); do
+    for ((i = 1; i <= ${#wc_pubip_arr[@]}; i++)); do
       if [[ $i != "$node_num" ]]; then
         a=$((a + 1))
         su - dmdba <<-DMARCH
@@ -2237,10 +2256,10 @@ MON_INST_OGUID = $oguid
 EOF
 DMMON
     ## 数组循环输出
-    for ((i = 0; i < ${#wc_pubip_array[@]}; i++)); do
+    for ((i = 0; i < ${#wc_pubip_arr[@]}; i++)); do
       su - dmdba <<-DMMON
 cat<<-EOF>>$data_dir/$db_name/dmmonitor_$dw_group_name.ini
-MON_DW_IP = ${wc_malip_array[$i]}:$mal_dw_port_num
+MON_DW_IP = ${wc_malip_arr[$i]}:$mal_dw_port_num
 EOF
 DMMON
     done
@@ -2614,17 +2633,17 @@ EOF
 
     if [[ $multipath = "Y" ]]; then
       if [[ ${disk_arr[0]} =~ "dev" ]]; then
-        scp "${wc_pubip_array[0]}":/etc/multipath.conf /etc/multipath.conf >/dev/null 2>&1
+        scp "${wc_pubip_arr[0]}":/etc/multipath.conf /etc/multipath.conf >/dev/null 2>&1
         cat /etc/multipath.conf
       fi
       if [[ $(find /dev/ -maxdepth 1 -user "dmdba" | wc -l | wc -l) -eq 0 || $(find /dev/ -maxdepth 1 -group "dinstall" | wc -l) -eq 0 ]]; then
-        scp "${wc_pubip_array[0]}":/etc/udev/rules.d/12-dm-permissions.rules /etc/udev/rules.d/12-dm-permissions.rules >/dev/null 2>&1
+        scp "${wc_pubip_arr[0]}":/etc/udev/rules.d/12-dm-permissions.rules /etc/udev/rules.d/12-dm-permissions.rules >/dev/null 2>&1
       elif [[ ! -d /dev/asmdisk || $(find /dev/asmdisk -mindepth 1 -name 'dm*' | wc -l) -eq 0 ]]; then
-        scp "${wc_pubip_array[0]}":/etc/udev/rules.d/12-dm-permissions.rules /etc/udev/rules.d/12-dm-permissions.rules >/dev/null 2>&1
+        scp "${wc_pubip_arr[0]}":/etc/udev/rules.d/12-dm-permissions.rules /etc/udev/rules.d/12-dm-permissions.rules >/dev/null 2>&1
       fi
       cat /etc/udev/rules.d/12-dm-permissions.rules
     else
-      scp "${wc_pubip_array[0]}":/etc/udev/rules.d/99-dm-asmdevices.rules /etc/udev/rules.d/99-dm-asmdevices.rules >/dev/null 2>&1
+      scp "${wc_pubip_arr[0]}":/etc/udev/rules.d/99-dm-asmdevices.rules /etc/udev/rules.d/99-dm-asmdevices.rules >/dev/null 2>&1
       cat /etc/udev/rules.d/99-dm-asmdevices.rules
     fi
 
@@ -2654,17 +2673,17 @@ DCR_OGUID = $oguid
 [GRP]
  DCR_GRP_TYPE = CSS
  DCR_GRP_NAME = GRP_CSS
- DCR_GRP_N_EP = ${#wc_malip_array[@]}
+ DCR_GRP_N_EP = ${#wc_malip_arr[@]}
  DCR_GRP_DSKCHK_CNT = 60
 EOF
 DMCFG
 
-    for ((x = 0; x < ${#wc_malip_array[@]}; x++)); do
+    for ((x = 0; x < ${#wc_malip_arr[@]}; x++)); do
       su - dmdba <<-DMCFG
           cat<<-EOF>>$data_dir/$dsc_db_name/dmdcr_cfg.ini
 [GRP_CSS]
  DCR_EP_NAME = CSS$x 
- DCR_EP_HOST = ${wc_malip_array[$x]}
+ DCR_EP_HOST = ${wc_malip_arr[$x]}
  DCR_EP_PORT = $css_dcr_ep_port
 EOF
 DMCFG
@@ -2676,19 +2695,19 @@ DMCFG
 [GRP]
  DCR_GRP_TYPE = ASM
  DCR_GRP_NAME = GRP_ASM
- DCR_GRP_N_EP = ${#wc_malip_array[@]}
+ DCR_GRP_N_EP = ${#wc_malip_arr[@]}
  DCR_GRP_DSKCHK_CNT = 60
 EOF
 DMCFG
 
-    for ((x = 0; x < ${#wc_malip_array[@]}; x++)); do
+    for ((x = 0; x < ${#wc_malip_arr[@]}; x++)); do
       su - dmdba <<-DMCFG
           cat<<-EOF>>$data_dir/$dsc_db_name/dmdcr_cfg.ini
 [GRP_ASM]
  DCR_EP_NAME = ASM$x
  DCR_EP_SHM_KEY = 9336$x
  DCR_EP_SHM_SIZE = 20
- DCR_EP_HOST = ${wc_malip_array[$x]}
+ DCR_EP_HOST = ${wc_malip_arr[$x]}
  DCR_EP_PORT = $asm_dcr_ep_port
  DCR_EP_ASM_LOAD_PATH = /dev/asmdisk
 EOF
@@ -2701,12 +2720,12 @@ DMCFG
 [GRP]
  DCR_GRP_TYPE = DB
  DCR_GRP_NAME = GRP_$dsc_db_name
- DCR_GRP_N_EP = ${#wc_malip_array[@]}
+ DCR_GRP_N_EP = ${#wc_malip_arr[@]}
  DCR_GRP_DSKCHK_CNT = 60
 EOF
 DMCFG
 
-    for ((x = 0; x < ${#wc_malip_array[@]}; x++)); do
+    for ((x = 0; x < ${#wc_malip_arr[@]}; x++)); do
       su - dmdba <<-DMCFG
           cat<<-EOF>>$data_dir/$dsc_db_name/dmdcr_cfg.ini
 [GRP_$dsc_db_name]
@@ -2720,7 +2739,7 @@ DMCFG
 
   else
 
-    scp "${wc_pubip_array[0]}":"$data_dir"/"$dsc_db_name"/dmdcr_cfg.ini "$data_dir"/"$dsc_db_name"/dmdcr_cfg.ini >/dev/null 2>&1
+    scp "${wc_pubip_arr[0]}":"$data_dir"/"$dsc_db_name"/dmdcr_cfg.ini "$data_dir"/"$dsc_db_name"/dmdcr_cfg.ini >/dev/null 2>&1
     chown -R dmdba.dinstall "$data_dir"/"$dsc_db_name"/dmdcr_cfg.ini
 
   fi
@@ -2733,12 +2752,12 @@ DMCFG
 function dsc_dmasvmal() {
 
   if [[ $node_num = 1 ]]; then
-    for ((x = 0; x < ${#wc_malip_array[@]}; x++)); do
+    for ((x = 0; x < ${#wc_malip_arr[@]}; x++)); do
       su - dmdba <<-DMDSM
 	cat<<-EOF>>$data_dir/$dsc_db_name/dmasvrmal.ini
 [MAL_INST$((x + 1))] 
   MAL_INST_NAME              = ASM$x
-  MAL_HOST                   = ${wc_malip_array[$x]}
+  MAL_HOST                   = ${wc_malip_arr[$x]}
   MAL_PORT                   = $asvrmal_mal_port
 
 EOF
@@ -2747,7 +2766,7 @@ DMDSM
 
   else
 
-    scp "${wc_pubip_array[0]}":"$data_dir"/"$dsc_db_name"/dmasvrmal.ini "$data_dir"/"$dsc_db_name"/dmasvrmal.ini >/dev/null 2>&1
+    scp "${wc_pubip_arr[0]}":"$data_dir"/"$dsc_db_name"/dmasvrmal.ini "$data_dir"/"$dsc_db_name"/dmasvrmal.ini >/dev/null 2>&1
     chown -R dmdba.dinstall "$data_dir"/"$dsc_db_name"/dmasvrmal.ini
 
   fi
@@ -2785,10 +2804,10 @@ CSSM_OGUID = $oguid
 EOF
 DMCSSM
 
-  for ((x = 0; x < ${#wc_malip_array[@]}; x++)); do
+  for ((x = 0; x < ${#wc_malip_arr[@]}; x++)); do
     su - dmdba <<-DMCSSM
   cat <<-EOF>>$data_dir/$dsc_db_name/dmcssm.ini
-CSSM_CSS_IP = ${wc_malip_array[$x]}:$css_dcr_ep_port
+CSSM_CSS_IP = ${wc_malip_arr[$x]}:$css_dcr_ep_port
 EOF
 DMCSSM
   done
@@ -2811,8 +2830,8 @@ function dsc_dmsvc() {
 
   [[ -e "$software_dir"/temp ]] && echo "" >"$software_dir"/temp
 
-  for ((x = 0; x < ${#wc_pubip_array[@]}; x++)); do
-    echo -n "${wc_pubip_array[$x]}":"$port_num", >>"$software_dir"/temp
+  for ((x = 0; x < ${#wc_pubip_arr[@]}; x++)); do
+    echo -n "${wc_pubip_arr[$x]}":"$port_num", >>"$software_dir"/temp
   done
   su - dmdba <<DMSVC
   cat <<-EOF>>/etc/dm_svc.conf
@@ -2902,13 +2921,13 @@ function dsc_start_ca() {
 
   log_print "启动css和asm服务"
   ##依次启动每个节点的css服务
-  for ((x = 0; x < ${#wc_pubip_array[@]}; x++)); do
+  for ((x = 0; x < ${#wc_pubip_arr[@]}; x++)); do
     while true; do
       sleep 5s
-      ssh "${wc_pubip_array[$x]}" "su - dmdba -c \"$env_dm_home/bin/DmCSSServiceCss start\""
+      ssh "${wc_pubip_arr[$x]}" "su - dmdba -c \"$env_dm_home/bin/DmCSSServiceCss start\""
       if [ $? -eq 0 ]; then
         echo
-        color_printf blue "节点 ${wc_pubip_array[$x]} 启动成功"
+        color_printf blue "节点 ${wc_pubip_arr[$x]} 启动成功"
         echo
         break
       fi
@@ -2916,13 +2935,13 @@ function dsc_start_ca() {
   done
 
   ##依次启动每个节点的asm实例服务
-  for ((x = 0; x < ${#wc_pubip_array[@]}; x++)); do
+  for ((x = 0; x < ${#wc_pubip_arr[@]}; x++)); do
     while true; do
       sleep 5s
-      ssh "${wc_pubip_array[$x]}" "su - dmdba -c \"$env_dm_home/bin/DmASMSvrServiceAsmsvr start\""
+      ssh "${wc_pubip_arr[$x]}" "su - dmdba -c \"$env_dm_home/bin/DmASMSvrServiceAsmsvr start\""
       if [ $? -eq 0 ]; then
         echo
-        color_printf blue "节点 ${wc_pubip_array[$x]} 启动成功"
+        color_printf blue "节点 ${wc_pubip_arr[$x]} 启动成功"
         echo
         break
       fi
@@ -3001,7 +3020,7 @@ function dsc_start() {
     sleep 5s
     su - dmdba -c "$env_dm_home/bin/DmService$dsc_db_name start"
     if [ $? -eq 0 ]; then
-      color_printf blue "节点 ${wc_pubip_array[0]} 启动成功"
+      color_printf blue "节点 ${wc_pubip_arr[0]} 启动成功"
       echo
       break
     fi
@@ -3029,19 +3048,19 @@ fi
   done
 EOF
 
-  lastIndex=$((${#wc_pubip_array[@]} - 1))
-  for ((x = 1; x < ${#wc_pubip_array[@]}; x++)); do
-    scp -r "$data_dir"/"$dsc_db_name"/"$dsc_ep_name"${x}_config "${wc_pubip_array[$x]}":"$data_dir"/"$dsc_db_name"/ >/dev/null 2>&1
-    ssh "${wc_pubip_array[$x]}" "chown -R dmdba.dinstall $data_dir/$dsc_db_name/$dsc_ep_name${x}_config"
-    scp -r "$software_dir"/starttmp.sh "${wc_pubip_array[$x]}":"$software_dir"/starttmp.sh >/dev/null 2>&1
-    ssh "${wc_pubip_array[$x]}" "sed -i '2s/'$((node_num - 1))'/'$x'/g' $software_dir/starttmp.sh"
-    ssh "${wc_pubip_array[$x]}" "sh $software_dir/starttmp.sh"
-    color_printf blue "节点 ${wc_pubip_array[$x]} 启动成功"
+  lastIndex=$((${#wc_pubip_arr[@]} - 1))
+  for ((x = 1; x < ${#wc_pubip_arr[@]}; x++)); do
+    scp -r "$data_dir"/"$dsc_db_name"/"$dsc_ep_name"${x}_config "${wc_pubip_arr[$x]}":"$data_dir"/"$dsc_db_name"/ >/dev/null 2>&1
+    ssh "${wc_pubip_arr[$x]}" "chown -R dmdba.dinstall $data_dir/$dsc_db_name/$dsc_ep_name${x}_config"
+    scp -r "$software_dir"/starttmp.sh "${wc_pubip_arr[$x]}":"$software_dir"/starttmp.sh >/dev/null 2>&1
+    ssh "${wc_pubip_arr[$x]}" "sed -i '2s/'$((node_num - 1))'/'$x'/g' $software_dir/starttmp.sh"
+    ssh "${wc_pubip_arr[$x]}" "sh $software_dir/starttmp.sh"
+    color_printf blue "节点 ${wc_pubip_arr[$x]} 启动成功"
     echo
 
     ## 修改数据库自动拉起参数
-    ssh "${wc_pubip_array[$x]}" "sed -i '4s/0/180/g' $data_dir/$dsc_db_name/dmdcr.ini"
-    ssh "${wc_pubip_array[$x]}" "sed -i '6s/0/360/g' $data_dir/$dsc_db_name/dmdcr.ini"
+    ssh "${wc_pubip_arr[$x]}" "sed -i '4s/0/180/g' $data_dir/$dsc_db_name/dmdcr.ini"
+    ssh "${wc_pubip_arr[$x]}" "sed -i '6s/0/360/g' $data_dir/$dsc_db_name/dmdcr.ini"
 
     if ((x == lastIndex)); then
       log_print "创建数据库归档" ""
@@ -3055,12 +3074,12 @@ EOF
           fi
         fi
       done
-      for ((y = 0; y < ${#wc_pubip_array[@]}; y++)); do
+      for ((y = 0; y < ${#wc_pubip_arr[@]}; y++)); do
         echo
-        color_printf blue "在节点 ${wc_pubip_array[$y]} 创建归档"
+        color_printf blue "在节点 ${wc_pubip_arr[$y]} 创建归档"
         echo
-        ssh "${wc_pubip_array[$y]}" "su - dmdba -c \"disql -S SYSDBA/SYSDBA:$port_num '\\\`/home/dmdba/scripts/conf_arch.sql'\""
-        ssh "${wc_pubip_array[$y]}" "sed -i '4i ARCH_LOCAL_SHARE = 1\n' $data_dir/$dsc_db_name/$dsc_ep_name${y}_config/dmarch.ini"
+        ssh "${wc_pubip_arr[$y]}" "su - dmdba -c \"disql -S SYSDBA/SYSDBA:$port_num '\\\`/home/dmdba/scripts/conf_arch.sql'\""
+        ssh "${wc_pubip_arr[$y]}" "sed -i '4i ARCH_LOCAL_SHARE = 1\n' $data_dir/$dsc_db_name/$dsc_ep_name${y}_config/dmarch.ini"
       done
       optimize_dmdb
     fi
@@ -3091,11 +3110,11 @@ function install_wc_oguid() {
   oguid=$(rand 400000 500000)
 
 }
-##配置公共参数
+##配置特殊参数
 function mode_wc_para() {
 
-  if [[ $wc_hostname ]]; then
-    echo -n " -dhn $wc_hostname" >>"$software_dir"/dwnode.sh
+  if [[ $hostname ]]; then
+    echo -n " -hn $hostname" >>"$software_dir"/dwnode.sh
   fi
   if [[ $dm_iso_name ]]; then
     echo -n " -di $dm_iso_name" >>"$software_dir"/dwnode.sh
@@ -3117,16 +3136,16 @@ function mode_wc_para() {
 ##分发其他节点
 function send_other_node() {
 
-  for ((i = 1; i < ${#wc_pubip_array[@]}; i++)); do
+  for ((i = 1; i < ${#wc_pubip_arr[@]}; i++)); do
     echo
-    color_printf green "拷贝脚本以及安装包到节点：${wc_pubip_array[$i]}"
+    color_printf green "拷贝脚本以及安装包到节点：${wc_pubip_arr[$i]}"
     echo
-    ssh "${wc_pubip_array[$i]}" "[[ -f $software_dir || -d $software_dir ]] && rm -rf $software_dir ; mkdir -p $software_dir"
-    scp "$software_dir"/dwnode.sh "${wc_pubip_array[$i]}":"$software_dir"
-    ssh "${wc_pubip_array[$i]}" "echo -n \" -node $((i + 1))\" >>$software_dir/dwnode.sh"
-    scp "$software_dir"/DMShellInstall "${wc_pubip_array[$i]}":"$software_dir"
+    ssh "${wc_pubip_arr[$i]}" "[[ -f $software_dir || -d $software_dir ]] && rm -rf $software_dir ; mkdir -p $software_dir"
+    scp "$software_dir"/dwnode.sh "${wc_pubip_arr[$i]}":"$software_dir"
+    ssh "${wc_pubip_arr[$i]}" "echo -n \" -node $((i + 1))\" >>$software_dir/dwnode.sh"
+    scp "$software_dir"/DMShellInstall "${wc_pubip_arr[$i]}":"$software_dir"
     if [[ $dm_iso_name ]]; then
-      scp "$software_dir"/"$dm_iso_name" "${wc_pubip_array[$i]}":"$software_dir"
+      scp "$software_dir"/"$dm_iso_name" "${wc_pubip_arr[$i]}":"$software_dir"
     else
       scp "$software_dir"/DMInstall.bin "$dw_monitor_ip":"$software_dir"
     fi
@@ -3142,10 +3161,7 @@ function install_dw() {
   dw_instance_name=${dw_group_name}_DW_0
   instance_name=$dw_instance_name$node_num
 
-  if [[ $node_num -gt -1 ]]; then
-    hostname=${wc_hostname_array[$((node_num - 1))]}
-  fi
-
+  ## 配置互信
   if [[ $node_num = 1 ]]; then
     install_wc_oguid
     ## 默认两节点
@@ -3161,8 +3177,8 @@ function install_dw() {
     fi
 
     ## 创建其余节点的安装脚本，并分发到其他节点
-    echo -n "sh $software_dir/DMShellInstall -dp $dm_passwd -d $env_dm_home -dd $data_dir -ad $arch_dir -bd $backup_dir -es $extent_size -ps $page_size -cs $case_sensitive -c $charset -lic $length_in_char -ls $log_size -sl $space_limit -pn $port_num -sp '$sysdba_pwd' -bm $backup_mode -m $only_conf_os -ud $install_until_db -oid $only_init_db -opd $optimize_db -oopd $only_optimize_db -mp $mem_percent -sm $sort_mode -dpi $wc_public_ip -dmi $wc_mal_ip -rp $root_passwd -dgn $dw_group_name -mpn $mal_port_num -mdpn $mal_dw_port_num -midpn $mal_inst_dw_port_num -oguid $oguid -dim $dm_install_mode -oi $os_iso" >"$software_dir"/dwnode.sh
-    #修改公共参数
+    echo -n "sh $software_dir/DMShellInstall -dp '$dm_passwd' -d $env_dm_home -dd $data_dir -ad $arch_dir -bd $backup_dir -es $extent_size -ps $page_size -cs $case_sensitive -c $charset -lic $length_in_char -ls $log_size -sl $space_limit -pn $port_num -sp '$sysdba_pwd' -bm $backup_mode -m $only_conf_os -ud $install_until_db -oid $only_init_db -opd $optimize_db -oopd $only_optimize_db -mp $mem_percent -sm $sort_mode -dpi $wc_public_ip -dmi $wc_mal_ip -rp '$root_passwd' -dgn $dw_group_name -mpn $mal_port_num -mdpn $mal_dw_port_num -midpn $mal_inst_dw_port_num -oguid $oguid -dim $dm_install_mode -oi $os_iso" >"$software_dir"/dwnode.sh
+    #配置特殊参数
     mode_wc_para
 
     ## 分发到监视器节点
@@ -3170,7 +3186,7 @@ function install_dw() {
       ## 监视器IP传输到备库节点
       echo -n " -dmoi $dw_monitor_ip" >>"$software_dir"/dwnode.sh
       ## 监视器只需要安装达梦软件即可
-      echo -n "sh $software_dir/DMShellInstall -dp $dm_passwd -d $env_dm_home -dd $data_dir -ad $arch_dir -bd $backup_dir -ud Y -dpi $wc_public_ip -dmi $wc_mal_ip -rp $root_passwd -dgn $dw_group_name -mdpn $mal_dw_port_num -oguid $oguid -dim $dm_install_mode -oi $os_iso" >"$software_dir"/dwmonitor_node.sh
+      echo -n "sh $software_dir/DMShellInstall -dp '$dm_passwd' -d $env_dm_home -dd $data_dir -ad $arch_dir -bd $backup_dir -ud Y -dpi $wc_public_ip -dmi $wc_mal_ip -rp '$root_passwd' -dgn $dw_group_name -mdpn $mal_dw_port_num -oguid $oguid -dim $dm_install_mode -oi $os_iso" >"$software_dir"/dwmonitor_node.sh
       if [[ $dm_iso_name ]]; then
         echo -n " -di $dm_iso_name" >>"$software_dir"/dwmonitor_node.sh
       fi
@@ -3202,17 +3218,13 @@ function install_dw() {
 ##安装dsc
 function install_dsc() {
 
-  hostname=${wc_hostname_array[$((node_num - 1))]}
-
-  if [[ $node_num = 1 ]]; then
-    install_wc_oguid
-    ssh_trust root "$root_passwd" "$wc_public_ip"
-    echo -n "sh $software_dir/DMShellInstall -dp $dm_passwd -d $env_dm_home -dd $data_dir -ad $arch_dir -bd $backup_dir -ddn $dsc_db_name -den $dsc_ep_name -es $extent_size -ps $page_size -cs $case_sensitive -c $charset -lic $length_in_char -ls $log_size -sl $space_limit -pn $port_num -sp '$sysdba_pwd' -apd $asm_pwd -bm $backup_mode -m $only_conf_os -ud $install_until_db -oid $only_init_db -opd $optimize_db -oopd $only_optimize_db -mp $mem_percent -sm $sort_mode -dpi $wc_public_ip -dmi $wc_mal_ip -rp $root_passwd -dcd $dcr_disk -vod $vote_disk -dad $data_disk -cdp $css_dcr_ep_port -adp $asm_dcr_ep_port -ddp $db_dcr_ep_port -amp $asvrmal_mal_port -oguid $oguid -dim $dm_install_mode -mtp $multipath -oi $os_iso" >"$software_dir"/dwnode.sh
-    #修改公共参数
-    mode_wc_para
-    ## 分发节点
-    send_other_node
-  fi
+  install_wc_oguid
+  ssh_trust root "$root_passwd" "$wc_public_ip"
+  echo -n "sh $software_dir/DMShellInstall -dp $dm_passwd -d $env_dm_home -dd $data_dir -ad $arch_dir -bd $backup_dir -ddn $dsc_db_name -den $dsc_ep_name -es $extent_size -ps $page_size -cs $case_sensitive -c $charset -lic $length_in_char -ls $log_size -sl $space_limit -pn $port_num -sp '$sysdba_pwd' -apd '$asm_pwd' -bm $backup_mode -m $only_conf_os -ud $install_until_db -oid $only_init_db -opd $optimize_db -oopd $only_optimize_db -mp $mem_percent -sm $sort_mode -dpi $wc_public_ip -dmi $wc_mal_ip -rp '$root_passwd' -dcd $dcr_disk -vod $vote_disk -dad $data_disk -cdp $css_dcr_ep_port -adp $asm_dcr_ep_port -ddp $db_dcr_ep_port -amp $asvrmal_mal_port -oguid $oguid -dim $dm_install_mode -mtp $multipath -oi $os_iso" >"$software_dir"/dwnode.sh
+  ## 配置特殊参数
+  mode_wc_para
+  ## 分发节点
+  send_other_node
 
 }
 
@@ -3285,7 +3297,7 @@ function main() {
         ## 业务 IP 地址拆分
         for i in ${wc_public_ip//,/ }; do
           ## 将业务IP加入数组中
-          wc_pubip_array+=("$i")
+          wc_pubip_arr+=("$i")
         done
       else
         color_printf red "请检查参数 [-dpi, --wc_public_ip] 的值是否为空！"
@@ -3299,31 +3311,10 @@ function main() {
         ## 心跳 IP 地址拆分
         for i in ${wc_mal_ip//,/ }; do
           ## 将心跳 IP 加入数组中
-          wc_malip_array+=("$i")
+          wc_malip_arr+=("$i")
         done
       else
         color_printf red "请检查参数 [-dmi, --wc_mal_ip] 的值是否为空！"
-        exit 99
-      fi
-      shift 2
-      ;;
-    -dhn | --wc_hostname)
-      if [[ $2 ]]; then
-        wc_hostname=$2
-        ## 主机名拆分
-        for i in ${wc_hostname//,/ }; do
-          ## 将主机名加入数组中
-          wc_hostname_array+=("$i")
-        done
-        ## 判断节点上限数量
-        if [[ $dm_install_mode = "datawatch" ]]; then
-          if [[ ${#wc_hostname_array[@]} -lt 2 || ${#wc_hostname_array[@]} -gt 9 ]]; then
-            color_printf red "请检查参数 [-dhn, --wc_hostname] $wc_hostname ，至少需要 2 个主机名，最多支持 9 个主机名！"
-            exit 99
-          fi
-        fi
-      else
-        color_printf red "请检查参数 [-dhn, --wc_hostname] 的值是否为空！"
         exit 99
       fi
       shift 2
@@ -3824,9 +3815,6 @@ function main() {
     esac
   done
 
-  ## 把传进的磁盘加到数组里面
-  disk_arr=("$dcr_disk" "$vote_disk" "$log_disk" "$arch_disk" "$data_disk")
-
   ## 切换用户除去显示 last login 信息
   sed -i 's/^session\+[[:space:]]\+include[[:space:]]\+postlogin/#&/g' /etc/pam.d/su
 
@@ -3900,9 +3888,11 @@ EOF
       fi
     fi
   fi
-
+  ## 把传进的磁盘加到数组里面
+  if [[ $dm_install_mode = "dsc" ]]; then
+    disk_arr=("$dcr_disk" "$vote_disk" "$log_disk" "$arch_disk" "$data_disk")
+  fi
   ## 安装 DW/DSC 时，多节点互信需要配置 yum 源，判断是否需要挂载操作系统 ISO 镜像，如果需要挂载则自动配置 yum 源；如果不需要挂载，则默认自行配置 yum 源
-
   if [[ $dm_install_mode = "datawatch" ]]; then
     if [[ $node_num = 1 && $os_iso = "Y" ]]; then
       conf_yum
@@ -3914,7 +3904,9 @@ EOF
     elif [[ $node_num = 1 && $os_iso = "Y" ]]; then
       conf_yum
     fi
-    install_dsc
+    if [[ $node_num = 1 ]]; then
+      install_dsc
+    fi
   fi
 
   color_printf blue "达梦数据库开始安装："
@@ -3943,6 +3935,7 @@ EOF
       fi
       if [[ $only_conf_os = "N" ]]; then
         install_dmdb
+        ## 单机数据库
         if [[ $install_until_db = "N" && $dm_install_mode != "dsc" ]]; then
           init_dmdb
           install_dmdb_svc

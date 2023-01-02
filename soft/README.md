@@ -29,6 +29,8 @@
 	- 适配复杂密码，除了 & ' " ()  四种字符外，可以输入任意字符
 - `2022/12/28`
 	- 适配单链路单盘多分区，聚合链路单盘多分区部署dsc（只能在linux7以上版本服务器使用）
+- `2023/01/02`
+	- 删除"-dhn" "--wc_hostname" 参数，保留"-hn" "--hostname" 参数， 集群时是主机名前缀，例如 -hn db，每个节点主机名是db01,db02..."
 
 # 参数介绍
 关于脚本的参数使用可执行 `./DMShellInstall -h` 进行查看。
@@ -73,7 +75,7 @@
 |参数缩写|参数用途|参数默认值|是否必填|
 |--|--|--|:--:|
 |-rp|root用户密码||√|
-|-dhn|主备主机名||×|
+|-hn|各节点主机名前缀||×|
 |-dpi|主备业务IP||√|
 |-dmi|主备MAL IP||√|
 |-dmoi|监视器主机 IP||√|
@@ -89,7 +91,7 @@ DSC安装脚本最多支持8个节点，需要所有节点挂载 ISO 用来配�
 |参数缩写|参数用途|参数默认值|是否必填|
 |--|--|--|:--:|
 -rp |root 用户密码||√|                                
--dhn|各节点主机名||×|
+-hn|各节点主机名前缀||×|
 -dpi|各节点业务IP||√|
 -dmi|各节点MAL IP||√|
 -ddn|数据库DB_NAME|DSC|x|                
@@ -206,7 +208,7 @@ DSC安装脚本最多支持8个节点，需要所有节点挂载 ISO 用来配�
 
 ### 一主一备
 ```bash
-./DMShellInstall -dhn dw01,dw02 `# 主备主机名`\
+./DMShellInstall -hn dw `# 主备主机名前缀`\
 -dpi 10.211.55.101,10.211.55.102 `# 主备业务IP`\
 -dmi 1.1.1.1,1.1.1.2 `# 主备MAL IP`\
 -dgn GRP1 `# 数据守护组名`\
@@ -237,7 +239,7 @@ DSC安装脚本最多支持8个节点，需要所有节点挂载 ISO 用来配�
 
 ### 一主两备
 ```bash
-./DMShellInstall -dhn dw01,dw02,dw03 `# 主备主机名`\
+./DMShellInstall -hn dw `# 主备主机名前缀`\
 -dpi 10.211.55.101,10.211.55.102,10.211.55.103 `# 主备业务IP`\
 -dmi 1.1.1.1,1.1.1.2,1.1.1.3 `# 主备MAL IP`\
 -dgn GRP1 `# 数据守护组名`\
@@ -268,7 +270,7 @@ DSC安装脚本最多支持8个节点，需要所有节点挂载 ISO 用来配�
 
 ### 一主三备
 ```bash
-./DMShellInstall -dhn dw01,dw02,dw03,dw04 `# 主备主机名`\
+./DMShellInstall -hn dw `# 主备主机名前缀`\
 -dpi 10.211.55.101,10.211.55.102,10.211.55.103,10.211.55.104 `# 主备业务IP`\
 -dmi 1.1.1.1,1.1.1.2,1.1.1.3,1.1.1.4 `# 主备MAL IP`\
 -dgn GRP1 `# 数据守护组名`\
@@ -299,7 +301,7 @@ DSC安装脚本最多支持8个节点，需要所有节点挂载 ISO 用来配�
 
 ### 一主一备一监视
 ```bash
-./DMShellInstall -dhn dw01,dw02 `# 主备主机名`\
+./DMShellInstall -hn dw `# 主备主机名前缀`\
 -dpi 10.211.55.101,10.211.55.102 `# 主备业务IP`\
 -dmi 1.1.1.1,1.1.1.2 `# 主备MAL IP`\
 -dmoi 10.211.55.103 `# 监视器主机 IP`\
@@ -333,7 +335,7 @@ DSC安装脚本最多支持8个节点，需要所有节点挂载 ISO 用来配�
 
 ### 磁盘分区：dcr vote data
 ```bash
-./DMShellInstall -dhn dsc01,dsc02 `# dsc主机名`\
+./DMShellInstall -hn dsc `# dsc主机名前缀`\
 -dpi 10.211.55.101,10.211.55.102 `# dsc业务IP`\
 -dmi 1.1.1.1,1.1.1.2 `# 各节点MAL IP`\
 -dcd /dev/sdc `# dcr磁盘`\
@@ -364,7 +366,7 @@ DSC安装脚本最多支持8个节点，需要所有节点挂载 ISO 用来配�
 ```
 ### 磁盘分区：dcr vote arch data
 ```bash
-./DMShellInstall -dhn dsc01,dsc02 `# dsc主机名`\
+./DMShellInstall -hn dsc `# dsc主机名前缀`\
 -dpi 10.211.55.101,10.211.55.102 `# dsc业务IP`\
 -dmi 1.1.1.1,1.1.1.2 `# 各节点MAL IP`\
 -dcd /dev/sdc `# dcr磁盘`\
@@ -396,7 +398,7 @@ DSC安装脚本最多支持8个节点，需要所有节点挂载 ISO 用来配�
 ```
 ### 磁盘分区：dcr vote log data
 ```bash
-./DMShellInstall -dhn dsc01,dsc02 `# dsc主机名`\
+./DMShellInstall -hn dsc `# dsc主机名前缀`\
 -dpi 10.211.55.101,10.211.55.102 `# dsc业务IP`\
 -dmi 1.1.1.1,1.1.1.2 `# 各节点MAL IP`\
 -dcd /dev/sdc `# dcr磁盘`\
@@ -428,7 +430,7 @@ DSC安装脚本最多支持8个节点，需要所有节点挂载 ISO 用来配�
 ```
 ### 磁盘分区：dcr vote arch log data
 ```bash
-./DMShellInstall -dhn dsc01,dsc02 `# dsc主机名`\
+./DMShellInstall -hn dsc `# dsc主机名前缀`\
 -dpi 10.211.55.101,10.211.55.102 `# dsc业务IP`\
 -dmi 1.1.1.1,1.1.1.2 `# 各节点MAL IP`\
 -dcd /dev/sdc `# dcr磁盘`\
@@ -464,7 +466,7 @@ DSC安装脚本最多支持8个节点，需要所有节点挂载 ISO 用来配�
 
 ### 磁盘分区：dcr vote data
 ```bash
-./DMShellInstall -dhn dsc01,dsc02,dsc03 `# dsc主机名`\
+./DMShellInstall -hn dsc `# dsc主机名前缀`\
 -dpi 10.211.55.101,10.211.55.102,10.211.55.103 `# dsc业务IP`\
 -dmi 1.1.1.1,1.1.1.2,1.1.1.3 `# 各节点MAL IP`\
 -dcd /dev/sdc `# dcr磁盘`\
@@ -495,7 +497,7 @@ DSC安装脚本最多支持8个节点，需要所有节点挂载 ISO 用来配�
 ```
 ### 磁盘分区：dcr vote arch data
 ```bash
-./DMShellInstall -dhn dsc01,dsc02 `# dsc主机名`\
+./DMShellInstall -hn dsc `# dsc主机名前缀`\
 -dpi 10.211.55.101,10.211.55.102,10.211.55.103  `# dsc业务IP`\
 -dmi 1.1.1.1,1.1.1.2,1.1.1.3 `# 各节点MAL IP`\
 -dcd /dev/sdc `# dcr磁盘`\
@@ -527,7 +529,7 @@ DSC安装脚本最多支持8个节点，需要所有节点挂载 ISO 用来配�
 ```
 ### 磁盘分区：dcr vote log data
 ```bash
-./DMShellInstall -dhn dsc01,dsc02 `# dsc主机名`\
+./DMShellInstall -hn dsc `# dsc主机名前缀`\
 -dpi 10.211.55.101,10.211.55.102,10.211.55.103  `# dsc业务IP`\
 -dmi 1.1.1.1,1.1.1.2,1.1.1.3 `# 各节点MAL IP`\
 -dcd /dev/sdc `# dcr磁盘`\
@@ -559,7 +561,7 @@ DSC安装脚本最多支持8个节点，需要所有节点挂载 ISO 用来配�
 ```
 ### 磁盘分区：dcr vote arch log data
 ```bash
-./DMShellInstall -dhn dsc01,dsc02 `# dsc主机名`\
+./DMShellInstall -hn dsc `# dsc主机名前缀`\
 -dpi 10.211.55.101,10.211.55.102,10.211.55.103  `# dsc业务IP`\
 -dmi 1.1.1.1,1.1.1.2,1.1.1.3 `# 各节点MAL IP`\
 -dcd /dev/sdc `# dcr磁盘`\
