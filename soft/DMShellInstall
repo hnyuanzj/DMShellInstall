@@ -1266,7 +1266,7 @@ set feedback off
 set lineshow off
 ALTER DATABASE MOUNT;
 ALTER DATABASE ARCHIVELOG;
-ALTER DATABASE ADD ARCHIVELOG 'DEST=$arch_dir/$db_name, TYPE=LOCAL, FILE_SIZE=1024, SPACE_LIMIT=$space_limit';
+ALTER DATABASE ADD ARCHIVELOG 'DEST=$arch_dir/$db_name, TYPE=LOCAL, FILE_SIZE=$log_size, SPACE_LIMIT=$space_limit';
 ALTER DATABASE OPEN;
 select arch_mode from v\$database;
 SELECT arch_name,
@@ -1297,14 +1297,14 @@ DMARCH
   if [[ $arch_disk = "" ]]; then
     su - dmdba <<-DMARCH
 	cat <<-EOF>>/home/dmdba/scripts/conf_arch.sql		
-ALTER DATABASE ADD ARCHIVELOG 'DEST = +$(upper "${asm_disk_arr[$lastIndex]}")/log/${dsc_ep_name}$((node_num - 1))/arch, TYPE = local, FILE_SIZE = 1024, SPACE_LIMIT = $space_limit_value'; 
+ALTER DATABASE ADD ARCHIVELOG 'DEST = +$(upper "${asm_disk_arr[$lastIndex]}")/log/${dsc_ep_name}$((node_num - 1))/arch, TYPE = local, FILE_SIZE = $log_size, SPACE_LIMIT = $space_limit_value'; 
 EOF
 DMARCH
     for ((x = 1; x <= ${#wc_pubip_arr[@]}; x++)); do
       if [[ $x != "$node_num" ]]; then
         su - dmdba <<-DMARCH
 	  cat <<-EOF>>/home/dmdba/scripts/conf_arch.sql		
-ALTER DATABASE ADD ARCHIVELOG 'DEST = $(upper "${dsc_ep_name}")$((x - 1)), TYPE = REMOTE, FILE_SIZE = 1024, SPACE_LIMIT = $space_limit_value, INCOMING_PATH = +$(upper "${asm_disk_arr[$lastIndex]}")/log/${dsc_ep_name}$((x - 1))/arch'; 
+ALTER DATABASE ADD ARCHIVELOG 'DEST = $(upper "${dsc_ep_name}")$((x - 1)), TYPE = REMOTE, FILE_SIZE = $log_size, SPACE_LIMIT = $space_limit_value, INCOMING_PATH = +$(upper "${asm_disk_arr[$lastIndex]}")/log/${dsc_ep_name}$((x - 1))/arch'; 
 EOF
 DMARCH
       fi
@@ -1312,14 +1312,14 @@ DMARCH
   else
     su - dmdba <<-DMARCH
 	cat <<-EOF>>/home/dmdba/scripts/conf_arch.sql		
-ALTER DATABASE ADD ARCHIVELOG 'DEST = +$(upper "${asm_disk_arr[$((lastIndex - 1))]}")/log/${dsc_ep_name}$((node_num - 1))/arch, TYPE = local, FILE_SIZE = 1024, SPACE_LIMIT = $space_limit_value'; 
+ALTER DATABASE ADD ARCHIVELOG 'DEST = +$(upper "${asm_disk_arr[$((lastIndex - 1))]}")/log/${dsc_ep_name}$((node_num - 1))/arch, TYPE = local, FILE_SIZE = $log_size, SPACE_LIMIT = $space_limit_value'; 
 EOF
 DMARCH
     for ((x = 1; x <= ${#wc_pubip_arr[@]}; x++)); do
       if [[ $x != "$node_num" ]]; then
         su - dmdba <<-DMARCH
 	  cat <<-EOF>>/home/dmdba/scripts/conf_arch.sql		
-ALTER DATABASE ADD ARCHIVELOG 'DEST = $(upper "${dsc_ep_name}")$((x - 1)), TYPE = REMOTE, FILE_SIZE = 1024, SPACE_LIMIT = $space_limit_value, INCOMING_PATH = +$(upper "${asm_disk_arr[$((lastIndex - 1))]}")/log/${dsc_ep_name}$((x - 1))/arch'; 
+ALTER DATABASE ADD ARCHIVELOG 'DEST = $(upper "${dsc_ep_name}")$((x - 1)), TYPE = REMOTE, FILE_SIZE = $log_size, SPACE_LIMIT = $space_limit_value, INCOMING_PATH = +$(upper "${asm_disk_arr[$((lastIndex - 1))]}")/log/${dsc_ep_name}$((x - 1))/arch'; 
 EOF
 DMARCH
       fi
@@ -2184,7 +2184,7 @@ ARCH_WAIT_APPLY = 1
 [ARCHIVE_LOCAL1]
         ARCH_TYPE            = LOCAL
         ARCH_DEST            = $arch_dir/$db_name
-        ARCH_FILE_SIZE       = 1024
+        ARCH_FILE_SIZE       = $log_size
         ARCH_SPACE_LIMIT     = $space_limit
 EOF
 DMARCH
