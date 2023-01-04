@@ -258,7 +258,7 @@ ser_date() {
 #==============================================================#
 dm_pid() {
     log_print "系统进程 信息" "date;date -R"
-    pid=$(pgrep dm.ini | eval "awk END{print}")
+    pid=$(pgrep -f dm.ini | eval "awk END{print}")
     top -n 5 -p "$pid"
 }
 #==============================================================#
@@ -469,11 +469,11 @@ main() {
     uli_sys | tee -a "$DMCheck"
     ser_date | tee -a "$DMCheck"
     dm_pid | tee -a "$DMCheck"
+    db_info | tee -a "$DMCheck"
     sel_ver | tee -a "$DMCheck"
     sel_lic | tee -a "$DMCheck"
     sel_ini_par | tee -a "$DMCheck"
     sel_para | tee -a "$DMCheck"
-    db_info | tee -a "$DMCheck"
     sel_redo | tee -a "$DMCheck"
     sel_arch | tee -a "$DMCheck"
     sel_data_arch | tee -a "$DMCheck"
