@@ -463,7 +463,6 @@ main() {
     swap_info | tee -a "$DMCheck"
     os_version | tee -a "$DMCheck"
     os_user | tee -a "$DMCheck"
-    disk_io | tee -a "$DMCheck"
     nic_info | tee -a "$DMCheck"
     firewall_info | tee -a "$DMCheck"
     uli_sys | tee -a "$DMCheck"
@@ -486,5 +485,6 @@ main() {
     sel_dead_his | tee -a "$DMCheck"
     sel_run_his | tee -a "$DMCheck"
     sel_ins_his | tee -a "$DMCheck"
+    disk_io | tee -a "$DMCheck"
 }
 main "$@"
