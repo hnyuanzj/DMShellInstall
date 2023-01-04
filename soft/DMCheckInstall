@@ -10,11 +10,11 @@
 # Copyright (C) 2021-2022 Pengcheng Liu       Zijian yuan
 #==============================================================#
 ## 安装脚本以及软件包存放位置
-software_dir=$(dirname $(readlink -f $0))
+software_dir=$(dirname "$(readlink -f "$0")")
 ## 达梦数据库安装日志
 DMCheck=$software_dir/print_dm_check_$(date +"20%y%m%d%H%M%S").log
 ##DM_HOME
-dm_home=$(ps -ef | grep dmserver | awk '{print $8}' | sed 's/\/bin\/dmserver$//g' | egrep -v 'grep|sed')
+dm_home=$(ps -ef | grep dmserver | awk '{print $8}' | sed 's/\/bin\/dmserver$//g' | grep -E -v 'grep|sed' | eval "awk END{print}")
 ##密码
 sysdba_pwd=SYSDBA
 ##IP
@@ -77,9 +77,9 @@ test_login_db() {
     while true; do
         sleep 5s
         PID=$(ps -ef | grep dm.ini | grep -v grep | grep -v $$ | awk '{print $2}')
-        if [ -n $PID ]; then
-            connResult=$(su - dmdba -c "$sqlCli \"select 1\"" | awk END{print})
-            if [ $connResult = 1 ]; then
+        if [ -n "$PID" ]; then
+            connResult=$(su - dmdba -c "$sqlCli \"select 1\"" | eval "awk END{print}")
+            if [ "$connResult" = 1 ]; then
                 break
             else
                 color_printf red "密码不正确"
@@ -97,8 +97,8 @@ cpu_info() {
     log_print "CPU 信息" ""
     cname=$(awk -F: '/model name/ {name=$2} END {print name}' /proc/cpuinfo | sed 's/^[ \t]*//;s/[ \t]*$//')
     cores=$(awk -F: '/model name/ {core++} END {print core}' /proc/cpuinfo)
-    echo "CPU model       :" $cname
-    echo "Number of cores :" $cores
+    echo "CPU model       :" "$cname"
+    echo "Number of cores :" "$cores"
 }
 
 #==============================================================#
@@ -121,10 +121,10 @@ disk_info() {
     log_print "磁盘 信息" ""
     fs=$(df -h | grep -v boot | awk '/^\/dev\/sd|vd|mapper/{print $1}')
     for p in $fs; do
-        mounted=$(df -h | awk '$1=="'$p'"{print $NF}')
-        size=$(df -h | awk '$1=="'$p'"{print $2}')
-        used=$(df -h | awk '$1=="'$p'"{print $3}')
-        used_percent=$(df -h | awk '$1=="'$p'"{print $5}')
+        mounted=$(df -h | awk '$1=="'"$p"'"{print $NF}')
+        size=$(df -h | awk '$1=="'"$p"'"{print $2}')
+        used=$(df -h | awk '$1=="'"$p"'"{print $3}')
+        used_percent=$(df -h | awk '$1=="'"$p"'"{print $5}')
         echo "硬盘 - 挂载点: $mounted , 总大小: $size , 使用: $used , 使用率: $used_percent"
     done
 }
@@ -134,7 +134,7 @@ disk_info() {
 #==============================================================#
 uuid_info() {
     log_print "数据盘UUID挂载" ""
-    cat /etc/fstab | grep -i dm
+    grep </etc/fstab -i dm
 }
 
 #==============================================================#
@@ -144,7 +144,7 @@ disk_sch() {
     log_print "磁盘调度算法" ""
     all_disk=$(lsblk -l | awk '/^sd|vd/{print $1}' | sed -n '/[0-9]$/!p')
     for a in ${all_disk// /}; do
-        echo "/dev/$a :  $(cat /sys/block/${a}/queue/scheduler)"
+        echo "/dev/$a :  $(cat /sys/block/"${a}"/queue/scheduler)"
     done
 }
 
@@ -181,7 +181,7 @@ os_version() {
 #==============================================================#
 os_user() {
     log_print "dmdba 信息" ""
-    cat /etc/passwd | grep dmdba
+    grep </etc/passwd dmdba
 }
 
 #==============================================================#
@@ -189,19 +189,19 @@ os_user() {
 #==============================================================#
 disk_io() {
     log_print "磁盘IO 信息" ""
-    local sysPathTmp=$(su - dmdba -c "$sqlCli  \"select para_value from v\\\$dm_ini where para_name='SYSTEM_PATH';\"" | awk END{print})
-    local sysPath=$(tr -d '\n' <<<$sysPathTmp)
+    sysPathTmp=$(su - dmdba -c "$sqlCli  \"select para_value from v\\\$dm_ini where para_name='SYSTEM_PATH';\"" | eval "awk END{print}")
+    sysPath=$(tr -d '\n' <<<"$sysPathTmp")
 
-    if [ -d $sysPath ]; then
-        dd if=/dev/zero of=$sysPath/testdisk.dbf bs=32k count=10k oflag=direct,nonblock
-        dd if=/dev/zero of=$sysPath/testdisk.dbf bs=32k count=10k oflag=sync
-        dd of=$sysPath/testdisk1.dbf if=$sysPath/testdisk.dbf bs=32k count=10k oflag=direct,nonblock
-        dd of=/dev/null if=$sysPath/testdisk.dbf bs=32k count=10k oflag=sync
+    if [ -d "$sysPath" ]; then
+        dd if=/dev/zero of="$sysPath"/testdisk.dbf bs=32k count=10k oflag=direct,nonblock
+        dd if=/dev/zero of="$sysPath"/testdisk.dbf bs=32k count=10k oflag=sync
+        dd of="$sysPath"/testdisk1.dbf if="$sysPath"/testdisk.dbf bs=32k count=10k oflag=direct,nonblock
+        dd of=/dev/null if="$sysPath"/testdisk.dbf bs=32k count=10k oflag=sync
     else
         color_printf red "挂载目录/dmdata不存在"
     fi
-    [[ -e $sysPath/testdisk.dbf ]] && rm -f $sysPath/testdisk.dbf
-    [[ -e $sysPath/testdisk1.dbf ]] && rm -f $sysPath/testdisk1.dbf
+    [[ -e $sysPath/testdisk.dbf ]] && rm -f "$sysPath"/testdisk.dbf
+    [[ -e $sysPath/testdisk1.dbf ]] && rm -f "$sysPath"/testdisk1.dbf
 }
 
 #==============================================================#
@@ -212,7 +212,7 @@ nic_info() {
     log_print "网卡信息" ""
     nic=$(ip addr | grep -v lo | grep '[0-9]:' | head -n 1 | awk -F: '{print $2}')
     for i in ${nic// /}; do
-        echo "$i : $(ethtool $i | grep -i speed | awk -F":" '{print $2}')"
+        echo "$i : $(ethtool "$i" | grep -i speed | awk -F":" '{print $2}')"
     done
 }
 
@@ -221,7 +221,7 @@ nic_info() {
 #==============================================================#
 firewall_info() {
     log_print "防火墙 信息" ""
-    if [[ $(systemctl status firewalld.service | grep -c running) > 0 ]]; then
+    if [[ $(systemctl status firewalld.service | grep -c running) -gt 0 ]]; then
         systemctl status firewalld
         firewall-cmd --list-all
     else
@@ -258,8 +258,8 @@ ser_date() {
 #==============================================================#
 dm_pid() {
     log_print "系统进程 信息" "date;date -R"
-    pid=$(ps -ef | grep dm.ini | grep -v grep | awk '{print $2}')
-    top -n 5 -p $pid
+    pid=$(pgrep dm.ini | eval "awk END{print}")
+    top -n 5 -p "$pid"
 }
 #==============================================================#
 ##17.DM运行环境
@@ -313,7 +313,7 @@ select 'varchar是否以字符为单位', cast(SF_GET_LENGTH_IN_CHAR() as varcha
 #==============================================================#
 sel_para() {
 
-    tab_name=$(su - dmdba -c "$sqlCli \"select table_name from user_tables where table_name like 'BAK_DMINI_%';\"" | awk END{print})
+    tab_name=$(su - dmdba -c "$sqlCli \"select table_name from user_tables where table_name like 'BAK_DMINI_%';\"" | eval "awk END{print}")
 
     log_print "数据库参数 信息" ""
     su - dmdba -c "$sqlCli  \"
@@ -452,40 +452,39 @@ main() {
             color_printf red "脚本已退出巡检，请检查是否参数是否正确，可以查看脚本帮助：'DMCheckInstall --help' 获取更多信息！"
             exit 99
             ;;
-        *) break ;;
         esac
     done
     test_login_db
-    cpu_info | tee $DMCheck
-    ram_info | tee -a $DMCheck
-    disk_info | tee -a $DMCheck
-    uuid_info | tee -a $DMCheck
-    disk_sch | tee -a $DMCheck
-    swap_info | tee -a $DMCheck
-    os_version | tee -a $DMCheck
-    os_user | tee -a $DMCheck
-    disk_io | tee -a $DMCheck
-    nic_info | tee -a $DMCheck
-    firewall_info | tee -a $DMCheck
-    uli_sys | tee -a $DMCheck
-    ser_date | tee -a $DMCheck
-    dm_pid | tee -a $DMCheck
-    sel_ver | tee -a $DMCheck
-    sel_lic | tee -a $DMCheck
-    sel_ini_par | tee -a $DMCheck
-    sel_para | tee -a $DMCheck
-    db_info | tee -a $DMCheck
-    sel_redo | tee -a $DMCheck
-    sel_arch | tee -a $DMCheck
-    sel_data_arch | tee -a $DMCheck
-    sel_bak | tee -a $DMCheck
-    sel_bak_data | tee -a $DMCheck
-    sel_svr_log | tee -a $DMCheck
-    sel_users | tee -a $DMCheck
-    sel_tabspace | tee -a $DMCheck
-    sel_grant | tee -a $DMCheck
-    sel_dead_his | tee -a $DMCheck
-    sel_run_his | tee -a $DMCheck
-    sel_ins_his | tee -a $DMCheck
+    cpu_info | tee "$DMCheck"
+    ram_info | tee -a "$DMCheck"
+    disk_info | tee -a "$DMCheck"
+    uuid_info | tee -a "$DMCheck"
+    disk_sch | tee -a "$DMCheck"
+    swap_info | tee -a "$DMCheck"
+    os_version | tee -a "$DMCheck"
+    os_user | tee -a "$DMCheck"
+    disk_io | tee -a "$DMCheck"
+    nic_info | tee -a "$DMCheck"
+    firewall_info | tee -a "$DMCheck"
+    uli_sys | tee -a "$DMCheck"
+    ser_date | tee -a "$DMCheck"
+    dm_pid | tee -a "$DMCheck"
+    sel_ver | tee -a "$DMCheck"
+    sel_lic | tee -a "$DMCheck"
+    sel_ini_par | tee -a "$DMCheck"
+    sel_para | tee -a "$DMCheck"
+    db_info | tee -a "$DMCheck"
+    sel_redo | tee -a "$DMCheck"
+    sel_arch | tee -a "$DMCheck"
+    sel_data_arch | tee -a "$DMCheck"
+    sel_bak | tee -a "$DMCheck"
+    sel_bak_data | tee -a "$DMCheck"
+    sel_svr_log | tee -a "$DMCheck"
+    sel_users | tee -a "$DMCheck"
+    sel_tabspace | tee -a "$DMCheck"
+    sel_grant | tee -a "$DMCheck"
+    sel_dead_his | tee -a "$DMCheck"
+    sel_run_his | tee -a "$DMCheck"
+    sel_ins_his | tee -a "$DMCheck"
 }
 main "$@"
