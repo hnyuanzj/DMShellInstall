@@ -1156,11 +1156,13 @@ function dm_sqllog() {
       su - dmdba <<-DMSQLLOG
   cat <<-EOF > $data_dir/$dsc_db_name/$dsc_ep_name${x}_config/sqllog.ini
 [SLOG_ALL]
-FILE_NUM      = 10
+FILE_NUM      = 20
 SWITCH_MODE   = 2
 SWITCH_LIMIT  = 512
 ASYNC_FLUSH   = 1
 FILE_PATH     = $data_dir/$dsc_db_name/$dsc_ep_name${x}_config/sqllog/
+SOL_TRACE_MASK = 2:3:22:25:28
+MIN_EXEC_TIME = 100
 EOF
 DMSQLLOG
     done
@@ -1170,11 +1172,13 @@ DMSQLLOG
     su - dmdba <<-DMSQLLOG
   cat <<-EOF >$data_dir/$db_name/sqllog.ini
 [SLOG_ALL]
-FILE_NUM      = 10
+FILE_NUM      = 20
 SWITCH_MODE   = 2
 SWITCH_LIMIT  = 512
 ASYNC_FLUSH   = 1
 FILE_PATH     = $data_dir/$db_name/sqllog/
+SOL_TRACE_MASK = 2:3:22:25:28
+MIN_EXEC_TIME = 100
 EOF
 DMSQLLOG
   fi
