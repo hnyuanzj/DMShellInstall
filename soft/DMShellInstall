@@ -2181,9 +2181,21 @@ DMMAL
     fi
     echo
     ## 写入本地归档内容
-    su - dmdba <<-DMARCH
+    if [[ $dw_monitor_ip ]]; then
+      su - dmdba <<-DMARCH
 cat<<-EOF>$data_dir/$db_name/dmarch.ini
 ARCH_WAIT_APPLY = 1
+EOF
+DMARCH
+    else
+      su - dmdba <<-DMARCH
+cat<<-EOF>$data_dir/$db_name/dmarch.ini
+ARCH_WAIT_APPLY = 0
+EOF
+DMARCH
+    fi
+    su - dmdba <<-DMARCH
+cat<<-EOF>>$data_dir/$db_name/dmarch.ini
 
 [ARCHIVE_LOCAL1]
         ARCH_TYPE            = LOCAL
@@ -3834,7 +3846,7 @@ EOF
         check_ip_arr "$wc_public_ip" -dpi --wc_public_ip
         check_ip_arr "$wc_mal_ip" -dmi --wc_mal_ip
         if [[ $dw_monitor_ip ]]; then
-          check_ip "$dw_monitor_ip" -dmoi --dw_monitor_ip
+          check_ip_arr "$dw_monitor_ip" -dmoi --dw_monitor_ip
         fi
       fi
       ##判断传进去的磁盘是否有重复的uuiid值，有的话脚本直接退出，只在一节点执行
